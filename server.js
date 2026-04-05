@@ -1,23 +1,31 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const db = require('./db'); // นำเข้าตัวเชื่อมต่อ Database
+
 const app = express();
-const db = require('./db');
 
-app.use(express.json());
-app.use(express.static('public'));
+// --- Middleware (ตั้งค่าพื้นฐาน) ---
+app.use(express.json()); // ให้ Express อ่านข้อมูลแบบ JSON ได้
+app.use(express.static('public')); // อนุญาตให้หน้าเว็บดึงไฟล์จากโฟลเดอร์ public (เช่น ไฟล์รูป, index.html)
 
-
+// --- ตั้งค่าระบบอัปโหลดรูปภาพ (Multer) ---
 const storage = multer.diskStorage({
-    destination: './public/images/',
+    destination: './public/images/', // ตำแหน่งเซฟรูป
     filename: (req, file, cb) => {
-        cb(null, file.originalname);
+        // แนะนำให้ใส่ Date.now() ป้องกันชื่อไฟล์ซ้ำกัน
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
     }
 });
 const upload = multer({ storage: storage });
 
+// ==========================================
+// API ROUTES (เส้นทางรับส่งข้อมูล)
+// ==========================================
 
-app.get('/api/libraryshop', async (req , res) => {
+// [1] ดึงข้อมูลหนังสือทั้งหมดพร้อมชื่อหมวดหมู่และสถานะ
+app.get('/api/libraryshop', async (req, res) => {
     try {
         const sql = `
             SELECT 
@@ -27,59 +35,63 @@ app.get('/api/libraryshop', async (req , res) => {
             FROM books b
             LEFT JOIN categories c ON b.category_id = c.id
             LEFT JOIN statuses s ON b.status_id = s.id
+            ORDER BY b.id ASC
         `;
-        
         const { rows: books } = await db.query(sql);
         res.json(books);
     } catch(err){
-        res.status(500).json({error : err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-
-app.post('/api/libraryshop', upload.single(`image`), async (req,res) => {
+// [2] เพิ่มหนังสือเล่มใหม่ (รับไฟล์รูป 'image')
+app.post('/api/libraryshop', upload.single('image'), async (req, res) => {
     try {
-        const {title, author, published_year, status_id, category_id} = req.body;
-        const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-image.png`;
+        const { title, author, published_year, status_id, category_id } = req.body;
+        const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-cover.png`;
 
-        const sql = `INSERT INTO books (title, author, published_year, cover_image, status_id, category_id) VALUES($1, $2, $3, $4, $5, $6)`;
+        const sql = `INSERT INTO books (title, author, published_year, cover_image, status_id, category_id) 
+                    VALUES($1, $2, $3, $4, $5, $6)`;
         await db.query(sql, [title, author, published_year, cover_image, status_id || null, category_id || null]);
 
         res.json({ message: 'บันทึกข้อมูลสำเร็จ!' });
     } catch(err){
-        res.status(500).json({error:err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-app.get('/api/categories', async (req,res) => {
+// [3] ดึงรายการหมวดหมู่ (สำหรับ Dropdown)
+app.get('/api/categories', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT * FROM categories');
         res.json(rows);
     } catch (err) {
-        res.status(500).json({error:err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-app.get('/api/statuses', async (req,res) => {
+// [4] ดึงรายการสถานะ (สำหรับ Dropdown)
+app.get('/api/statuses', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT * FROM statuses');
         res.json(rows);
     } catch (err) {
-        res.status(500).json({error:err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-app.get('/api/libraryshop/:id', async (req,res) =>{
+// [5] ดึงข้อมูลหนังสือ 1 เล่ม (สำหรับป๊อปอัปแก้ไข)
+app.get('/api/libraryshop/:id', async (req, res) => {
     try {
-        // เปลี่ยน ? เป็น $1
         const { rows } = await db.query('SELECT * FROM books WHERE id = $1', [req.params.id]);
         res.json(rows[0]);
     } catch(err){
-        res.status(500).json({error:err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
+// [6] บันทึกการแก้ไขข้อมูลหนังสือ (อัปเดต)
+app.put('/api/libraryshop/:id', upload.single('images'), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, author, published_year, status_id, category_id } = req.body;
@@ -92,9 +104,9 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
 
         let sql, params;
 
-        if (req.file){
+        // เช็กว่ามีการอัปโหลดรูปใหม่เข้ามาด้วยหรือไม่
+        if (req.file) {
             const images_url = `/images/${req.file.filename}`;
-
             sql = `UPDATE books SET title=$1, author=$2, published_year=$3, cover_image=$4, status_id=$5, category_id=$6 WHERE id=$7`;
             params = [finalTitle, finalAuthor, finalYear, images_url, finalStatus, finalCategory, id];
         } else {
@@ -103,23 +115,24 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
         }
 
         await db.query(sql, params);
-        res.json({message: 'Update Success'});
+        res.json({message: 'อัปเดตข้อมูลสำเร็จ'});
     } catch(err){
         console.error("Update Error:", err);
-        res.status(500).json({error:err.message});
+        res.status(500).json({error: err.message});
     }
 });
 
-app.delete('/api/books/:id', async (req,res) =>{
+// [7] ลบหนังสือ
+app.delete('/api/books/:id', async (req, res) => {
     try {
         const bookid = req.params.id;
-
         const sql = "DELETE FROM books WHERE id = $1";
         await db.query(sql, [bookid]);
-        res.send({ message: "Book delete successfully" });
+        res.send({ message: "ลบหนังสือสำเร็จ" });
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 });
 
-app.listen(3000, () => console.log(`Server running on port 3000`));
+// สั่งให้ Server เริ่มทำงาน
+app.listen(3000, () => console.log(` Server running on port 3000`));
