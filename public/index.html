@@ -1,0 +1,482 @@
+<html>
+    <head>
+        <title>ระบบจัดการหนังสือออนไลน์</title>
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+ :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --danger: #EF4444;
+            --danger-hover: #DC2626;
+            --bg-color: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--surface);
+            padding: 30px 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        h2, h3 {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* ฟอร์มเพิ่มสินค้า */
+        .add-library-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #F9FAFB;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+
+        input[type="text"], 
+        input[type="number"], 
+        select, 
+        input[type="file"] {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background-color: var(--surface);
+        }
+
+        input[type="text"]:focus, 
+        input[type="number"]:focus, 
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* ปุ่มต่างๆ */
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #E5E7EB;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background-color: #D1D5DB;
+        }
+
+        .btn-danger {
+            background-color: white;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            vertical-align: middle;
+        }
+
+        td img {
+            border-radius: 8px;
+            object-fit: cover;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .edit-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: rgba(79, 70, 229, 0.1);
+            transition: 0.2s;
+        }
+
+        .edit-link:hover {
+            background: rgba(79, 70, 229, 0.2);
+        }
+
+        .modal {
+            display:none; 
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px); /* ทำให้พื้นหลังเบลอ */
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            margin: 6vh auto;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-content p {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="number"],
+        .modal-content select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .modal-actions-left {
+            margin-right: auto;
+        }
+
+        </style>
+    </head>
+    <body onload="init()">
+        <div class="container">
+            <h2>รายการสินค้าทั้งหมด</h2>
+            <form id="libraryForm" class="add-library-form" onsubmit="return false;" >
+                <input type="text" id="title" placeholder="ชื่อหนังสือ">
+                <input type="text" id="author" placeholder="ผู้เเต่ง">
+                <input type="number" id="published_year" placeholder="ปีที่พิมพ์">
+                <select id="status_id">
+                    <option value="">--กำลังโหลดสถานะ--</option>
+                </select>
+                <select id="category_id"><option value="">--กำลังโหลดหมวดหมู่--</option></select>
+                <input type="file" id="images">
+                <button type="button" class="btn-primary" onclick="savelibrary()">บันทึกข้อมูล</button>
+            </form>
+
+            <div id="libraryTable"></div>
+            <div id="display"></div>
+        </div>
+
+        <div id="libraryModal" class="modal">
+            <div class="modal-content">
+                <h3>แก้ไขหนังสือ</h3>
+                <input type="hidden" id="edit_id">
+
+                <p>
+                    <span>ชื่อหนังสือ:</span>
+                    <input type="text" id="edit_title" placeholder="ชื่อหนังสือ">
+                </p>
+
+                <p>
+                    <span>ชื่อผู้เเต่ง:</span>
+                    <input type="text" id="edit_author" placeholder="ชื่อผู้เเต่ง">
+                </p>
+                <p>
+                    <span>ปีที่พิมพ์:</span>
+                    <input type="text" id="edit_published_year" placeholder="ปีที่พิมพ์">
+                </p>
+                <p>
+                    <span>สถานะ:</span>
+                    <select id="edit_status_id"></select>
+                </p>
+                <p>
+                    <span>หมวดหมู่:</span>
+                    <select id="edit_category_id"></select>
+                </p>
+                <p>
+                <span>รูปภาพปัจจุบัน:</span>
+                <img id="current_image" src="" width='120px' style="border-radius: 8px; border: 1px solid #eee;">
+            </p>
+            <p>
+                <span>อัปโหลดรูปภาพใหม่:</span>
+                <input type="file" id="edit_images">
+            </p>
+            <div class="modal-actions">
+                <div class="modal-actions-left">
+                    <button type="button" class="btn-danger" onclick="deleteLibrary()">ลบหนังสือ</button>
+                </div>
+                <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
+                <button class="btn-primary" onclick="saveData()">บันทึกการเเก้ไขข้อมูล</button>
+            </div>
+        </div>
+    </div>
+    </body>
+    <script>
+        async function init() {
+            await loadCategories();
+            await loadStatus();
+            await loadlibrary();
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/api/categories');
+                const categories = await res.json();
+                let options = `<option value="">เลือกหมวดหมู่</option>`;
+                categories.forEach(c => {
+                    options += `<option value="${c.id}">${c.name}</option>`;
+                });
+                document.getElementById('category_id').innerHTML = options;
+                document.getElementById('edit_category_id').innerHTML = options;
+            } catch (err) {
+                console.error("Error loading categories:", err);
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const res = await fetch('/api/statuses');
+                const statuses = await res.json();
+                let options = `<option value="">เลือกสถานะ</option>`;
+                statuses.forEach(s => {
+                    options += `<option value="${s.id}">${s.name}</option>`;
+                });
+                document.getElementById('status_id').innerHTML = options;
+                document.getElementById('edit_status_id').innerHTML = options;
+            } catch (err) {
+                console.error("Error loading statuses:", err);
+            }
+        }
+
+        async function loadlibrary() {
+            try {
+
+                const response = await fetch('/api/libraryshop');
+                const books = await response.json();
+                
+                let html = `
+                    <table>
+                        <tr style="background-color:#eee;">
+                            <th>Image</th>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Author</th>
+                            <th>published year</th>
+                            <th>Status</th>
+                            <th>categories</th>
+                            <th>Manage</th>
+                        </tr>
+                `;
+                books.forEach((b,index) => {
+                    html += `
+                        <tr>
+                            <td><img src="${b.cover_image}" width="60" height="60"></td>
+                            <td style="color: #6B7280;">${index + 1}</td>
+                            <td>${b.title}</td>
+                            <td>${b.author}</td>
+                            <td>${b.published_year}</td>
+                            <td>${b.status_name}</td>
+                            <td>${b.categories}</td>
+                            <td> <a href="#" class="edit-link" onclick="openModal(${b.id}); return false;">แก้ไข</a> </td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                document.getElementById('display').innerHTML = html;
+            } catch (err) {
+                console.error('Error:', err);
+                document.getElementById('display').innerHTML = '<p style="color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+            }
+        }
+        
+        async function savelibrary() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const published_year = document.getElementById('published_year').value;
+            const status_id = document.getElementById('status_id').value;
+            const category_id = document.getElementById('category_id').value;
+            const images = document.getElementById('images');
+
+            if(!title || !author || !published_year || !status_id || !category_id) {
+                alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('author', author);
+            formData.append('published_year', published_year);
+            formData.append('status_id', status_id);
+            formData.append('category_id', category_id);
+            
+            if(images.files[0]){
+                formData.append('image', images.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/libraryshop', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                alert(result.message);
+                
+                // สั่งล้างฟอร์มแล้วโหลดตารางใหม่ โดยไม่ต้องกด F5
+                document.getElementById('libraryForm').reset();
+                await loadlibrary();
+            } catch(err) {
+                console.error("Save Error:", err);
+            }
+        }
+
+        async function deleteLibrary() {
+            const id = document.getElementById('edit_id').value
+            if(confirm('คุณต้องการลบหนังสือเล่มนี้หรือไม่?')) {
+                try {
+                    const response = await fetch(`/api/books/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        alert('ลบข้อมูลสำเร็จ');
+                        await loadlibrary(); 
+                    } else {
+                        alert('ลบข้อมูลไม่สำเร็จ เช็ค Server ครับ');
+                    }
+                } catch(err) {
+                    console.error('เกิดข้อผิดพลาดในการลบ:', err);
+                }
+            }
+        }
+
+        async function openModal(id) {
+            console.log('คลิกแล้ว ID คือ:' , id);
+            document.getElementById('libraryModal').style.display = 'block';
+
+            try{
+                const res = await fetch(`/api/libraryshop/${id}`);
+                if(!res.ok) throw new Error('ดึงข้อมูลจาก Server ไม่ได้');
+
+                const b = await res.json();
+                console.log('ข้อมูลที่ได้จาก Server :' ,b)
+
+                document.getElementById('edit_id').value = b.id
+                document.getElementById('edit_title').value = b.title
+                document.getElementById('edit_author').value = b.author
+                document.getElementById('edit_published_year').value = b.published_year
+                document.getElementById('edit_status_id').value = b.status_id
+                document.getElementById('edit_category_id').value = b.category_id
+                document.getElementById('current_image').src = b.cover_image
+            }catch(error){
+                console.error('เกิดข้อผิดพลาด:',error);
+                alert('ไม่สามาถรโหลดข้อมูลหนังสือได้:' + error.message);
+            }
+        }
+
+        function closeModal(){
+            document.getElementById('libraryModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('libraryModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        async function saveData() {
+            const id = document.getElementById('edit_id').value;
+            const formData = new FormData();
+
+            formData.append('title', document.getElementById('edit_title').value);
+            formData.append('author', document.getElementById('edit_author').value);
+            formData.append('published_year', document.getElementById('edit_published_year').value);
+            formData.append('status_id', document.getElementById('edit_status_id').value);
+            formData.append('category_id', document.getElementById('edit_category_id').value);
+            
+            const fileInput = document.getElementById('edit_images');
+            if(fileInput.files[0]){
+                formData.append('images' , fileInput.files[0]);
+            }
+
+            try {
+                const response = await fetch(`/api/libraryshop/${id}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                if(response.ok) {
+                    alert('บันทึกข้อมูลสำเร็จ!');
+                    closeModal();
+                    loadlibrary();
+                }
+            } catch(err) {
+                console.error("Update Error:", err);
+            }
+        }
+    </script>
+</html>
