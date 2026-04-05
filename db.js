@@ -1,8 +1,7 @@
-// ไฟล์ db.js
-require('dotenv').config(); // 1. สั่งให้ระบบไปอ่านไฟล์ .env ที่เราซ่อนไว้
+
+require('dotenv').config(); // 
 const { Pool } = require('pg');
 
-// 2. ดึงค่า DATABASE_URL จากไฟล์ .env มาใช้งาน
 const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({

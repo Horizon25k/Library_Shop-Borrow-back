@@ -7,7 +7,7 @@ const db = require('./db');
 app.use(express.json());
 app.use(express.static('public'));
 
-// ตั้งค่า Multer (ยังใช้เหมือนเดิม)
+
 const storage = multer.diskStorage({
     destination: './public/images/',
     filename: (req, file, cb) => {
@@ -16,9 +16,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// ==========================================
-// [GET] ดึงข้อมูลหนังสือทั้งหมด
-// ==========================================
+
 app.get('/api/libraryshop', async (req , res) => {
     try {
         const sql = `
@@ -30,7 +28,7 @@ app.get('/api/libraryshop', async (req , res) => {
             LEFT JOIN categories c ON b.category_id = c.id
             LEFT JOIN statuses s ON b.status_id = s.id
         `;
-        // Postgres ใช้ { rows } ในการรับค่า
+        
         const { rows: books } = await db.query(sql);
         res.json(books);
     } catch(err){
@@ -38,15 +36,12 @@ app.get('/api/libraryshop', async (req , res) => {
     }
 });
 
-// ==========================================
-// [POST] เพิ่มหนังสือ
-// ==========================================
+
 app.post('/api/libraryshop', upload.single(`image`), async (req,res) => {
     try {
         const {title, author, published_year, status_id, category_id} = req.body;
         const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-image.png`;
 
-        // เปลี่ยน ? เป็น $1, $2, ...
         const sql = `INSERT INTO books (title, author, published_year, cover_image, status_id, category_id) VALUES($1, $2, $3, $4, $5, $6)`;
         await db.query(sql, [title, author, published_year, cover_image, status_id || null, category_id || null]);
 
@@ -56,9 +51,6 @@ app.post('/api/libraryshop', upload.single(`image`), async (req,res) => {
     }
 });
 
-// ==========================================
-// [GET] ดึงหมวดหมู่ และ สถานะ
-// ==========================================
 app.get('/api/categories', async (req,res) => {
     try {
         const { rows } = await db.query('SELECT * FROM categories');
@@ -77,9 +69,6 @@ app.get('/api/statuses', async (req,res) => {
     }
 });
 
-// ==========================================
-// [GET] ดึงข้อมูลหนังสือ 1 เล่ม (สำหรับแก้ไข)
-// ==========================================
 app.get('/api/libraryshop/:id', async (req,res) =>{
     try {
         // เปลี่ยน ? เป็น $1
@@ -90,9 +79,6 @@ app.get('/api/libraryshop/:id', async (req,res) =>{
     }
 });
 
-// ==========================================
-// [PUT] แก้ไขข้อมูลหนังสือ
-// ==========================================
 app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
     try {
         const { id } = req.params;
@@ -108,7 +94,7 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
 
         if (req.file){
             const images_url = `/images/${req.file.filename}`;
-            // เปลี่ยน ? เป็น $1, $2, $3... และเรียงลำดับให้ตรงกับ Array
+
             sql = `UPDATE books SET title=$1, author=$2, published_year=$3, cover_image=$4, status_id=$5, category_id=$6 WHERE id=$7`;
             params = [finalTitle, finalAuthor, finalYear, images_url, finalStatus, finalCategory, id];
         } else {
@@ -124,13 +110,10 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req , res) => {
     }
 });
 
-// ==========================================
-// [DELETE] ลบหนังสือ
-// ==========================================
 app.delete('/api/books/:id', async (req,res) =>{
     try {
         const bookid = req.params.id;
-        // เปลี่ยน ? เป็น $1
+
         const sql = "DELETE FROM books WHERE id = $1";
         await db.query(sql, [bookid]);
         res.send({ message: "Book delete successfully" });
