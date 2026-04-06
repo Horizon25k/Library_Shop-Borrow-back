@@ -48,7 +48,7 @@ app.get('/api/libraryshop', async (req, res) => {
 app.post('/api/libraryshop', upload.single('image'), async (req, res) => {
     try {
         const { title, author, published_year, status_id, category_id } = req.body;
-        const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-cover.png`;
+        const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-image.png`;
 
         const sql = `INSERT INTO books (title, author, published_year, cover_image, status_id, category_id) 
                     VALUES($1, $2, $3, $4, $5, $6)`;
