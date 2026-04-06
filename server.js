@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const db = require('./db'); // นำเข้าตัวเชื่อมต่อ Database
+const db = require('./config/db'); // นำเข้าตัวเชื่อมต่อ Database
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');

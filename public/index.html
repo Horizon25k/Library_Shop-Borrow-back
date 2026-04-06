@@ -164,7 +164,7 @@
             left: 0; top: 0;
             width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px); /* ทำให้พื้นหลังเบลอ */
+            backdrop-filter: blur(4px); 
         }
 
         .modal-content {
@@ -221,10 +221,9 @@
         }
 
         .header-bar h2 {
-            margin: 0; /* เอา margin เก่าออกเพื่อไม่ให้เบี้ยว */
+            margin: 0; 
         }
 
-        /* ดีไซน์ปุ่ม Logout */
         .btn-logout {
             background-color: transparent;
             color: var(--danger);
@@ -294,7 +293,6 @@
             window.location.href = '/login.html';
         }
 
-        // 2. ฟังก์ชันออกจากระบบ (เคลียร์ Token แล้วเด้งกลับไปหน้าล็อกอิน)
         function logout() {
             localStorage.removeItem('token');
             window.location.href = '/login.html';
@@ -302,9 +300,9 @@
 
         // 1. ฟังก์ชันเริ่มต้นทำงานตอนโหลดหน้าเว็บ
         async function init() {
-            await loadStatus();     // โหลดข้อมูลตัวเลือกสถานะ
-            await loadCategories(); // โหลดข้อมูลตัวเลือกหมวดหมู่
-            await loadlibrary();    // โหลดข้อมูลตารางหนังสือ
+            await loadStatus();     
+            await loadCategories(); 
+            await loadlibrary();
         }
 
         // 2. ดึงข้อมูลหมวดหมู่มาใส่ใน Dropdown
@@ -401,7 +399,7 @@
                 alert(result.message);
                 
                 document.getElementById('libraryForm').reset(); // ล้างฟอร์ม
-                await loadlibrary(); // โหลดตารางใหม่
+                await loadlibrary(); 
             } catch(err) { console.error("Save Error:", err); }
         }
 
