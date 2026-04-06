@@ -12,9 +12,9 @@ const pool = new Pool({
 // ทดสอบการเชื่อมต่อเมื่อเริ่มระบบ
 pool.connect((err, client, release) => {
     if (err) {
-        return console.error('เชื่อมต่อฐานข้อมูล Neon ไม่สำเร็จ:', err.stack);
+        return console.error('The Neon database connection failed:', err.stack);
     }
-    console.log('เชื่อมต่อฐานข้อมูล Neon สำเร็จแล้ว!');
+    console.log('The Neon database has been successfully connected!');
     release(); // คืนการเชื่อมต่อให้ Pool
 });
 

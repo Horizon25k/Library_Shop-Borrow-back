@@ -3,6 +3,10 @@ const multer = require('multer');
 const path = require('path');
 const db = require('./db'); // นำเข้าตัวเชื่อมต่อ Database
 
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = 'MySuperSecretLibraryKey'; // กุญแจลับสำหรับเซิร์ฟเวอร์
+
 const app = express();
 
 // --- Middleware (ตั้งค่าพื้นฐาน) ---
@@ -11,11 +15,9 @@ app.use(express.static('public')); // อนุญาตให้หน้าเ
 
 // --- ตั้งค่าระบบอัปโหลดรูปภาพ (Multer) ---
 const storage = multer.diskStorage({
-    destination: './public/images/', // ตำแหน่งเซฟรูป
+    destination: './public/images/', 
     filename: (req, file, cb) => {
-        // แนะนำให้ใส่ Date.now() ป้องกันชื่อไฟล์ซ้ำกัน
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
+        cb(null,file.originalname);
     }
 });
 const upload = multer({ storage: storage });
@@ -131,6 +133,54 @@ app.delete('/api/books/:id', async (req, res) => {
         res.send({ message: "ลบหนังสือสำเร็จ" });
     } catch (error) {
         res.status(500).send({ error: error.message });
+    }
+});
+
+// ==========================================
+// 1. API สร้างบัญชีแอดมินอัตโนมัติ (แก้ปัญหารหัส Hash ผิด)
+// ==========================================
+app.get('/api/setup-admin', async (req, res) => {
+    try {
+        const plainPassword = 'password123'; 
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+        
+        await db.query("DELETE FROM users WHERE username = 'admin'");
+        await db.query("INSERT INTO users (username, password) VALUES ('admin', $1)", [hashedPassword]);
+        
+        res.send(`<h2>สร้างบัญชีสำเร็จ!</h2><p>User: <b>admin</b></p><p>Pass: <b>${plainPassword}</b></p>`);
+    } catch (err) {
+        res.status(500).send("Error: " + err.message);
+    }
+});
+
+// ==========================================
+// 2. API สำหรับ Login
+// ==========================================
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        
+        const { rows } = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'ไม่พบชื่อผู้ใช้งานนี้' });
+        }
+
+        const user = rows[0];
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'รหัสผ่านไม่ถูกต้อง' });
+        }
+
+        // สร้าง Token อายุ 1 วัน
+        const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1d' });
+        
+        res.json({ message: 'เข้าสู่ระบบสำเร็จ!', token: token });
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });
     }
 });
 

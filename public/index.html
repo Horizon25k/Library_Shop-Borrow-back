@@ -211,11 +211,40 @@
         .modal-actions-left {
             margin-right: auto;
         }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-bar h2 {
+            margin: 0; /* เอา margin เก่าออกเพื่อไม่ให้เบี้ยว */
+        }
+
+        /* ดีไซน์ปุ่ม Logout */
+        .btn-logout {
+            background-color: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-logout:hover {
+            background-color: var(--danger);
+            color: white;
+        }
     </style>
 </head>
 <body onload="init()">
     <div class="container">
-        <h2>รายการสินค้าทั้งหมด</h2>
+        <div class="header-bar">
+            <h2> ระบบจัดการหนังสือ</h2>
+            <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+        </div>
         
         <form id="libraryForm" class="add-library-form" onsubmit="return false;">
             <input type="text" id="title" placeholder="ชื่อหนังสือ">
@@ -260,6 +289,17 @@
     </div>
 
     <script>
+
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login.html';
+        }
+
+        // 2. ฟังก์ชันออกจากระบบ (เคลียร์ Token แล้วเด้งกลับไปหน้าล็อกอิน)
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }        
+
         // 1. ฟังก์ชันเริ่มต้นทำงานตอนโหลดหน้าเว็บ
         async function init() {
             await loadStatus();     // โหลดข้อมูลตัวเลือกสถานะ
@@ -312,7 +352,7 @@
                     html += `
                         <tr>
                             <td><img src="${b.cover_image}" width="60" height="60"></td>
-                            <td style="color: #6B7280;">${'B',b.id}</td>
+                            <td style="color: #6B7280;">B${b.id}</td>
                             <td>${b.title}</td>
                             <td>${b.author}</td>
                             <td>${b.published_year}</td>
