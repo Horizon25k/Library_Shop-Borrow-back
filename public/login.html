@@ -11,8 +11,8 @@
     <div class="login-box">
         <h2>ระบบจัดการหนังสือ</h2>
         <form id="loginForm" onsubmit="return false;">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="username" placeholder="Username (admin)" required>
+            <input type="password" id="password" placeholder="Password (123456)" required>
             <button type="button" onclick="login()">เข้าสู่ระบบ</button>
         </form>
     </div>
@@ -32,10 +32,10 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    localStorage.setItem('token', result.token); // เก็บกุญแจ
-                    window.location.href = '/index.html'; // ส่งไปหน้าหลัก
+                    localStorage.setItem('token', result.token); 
+                    window.location.href = '/index.html'; 
                 } else {
-                    alert(result.message); // แจ้งเตือนถ้ารหัสผิด
+                    alert(result.message); 
                 }
             } catch (err) {
                 alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");

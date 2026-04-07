@@ -199,7 +199,7 @@ app.post('/api/borrow', async(req,res) => {
             return res.status(400).json({message:'หนังสือนี้ถูกยืมไปเเล้ว'})
         }
         if(checkBook.rows[0].status_id === 3) {
-            return res.status(400).json({message:'หนังสือนี้อยู่ระหว่างการส่งซ้อม'})
+            return res.status(400).json({message:'หนังสือนี้อยู่ระหว่างการส่งซ่อม'})
         }
         
         const borrowDate = new Date();
