@@ -1,0 +1,41 @@
+body { 
+    font-family: 'Prompt', sans-serif; 
+    background-color: #F3F4F6; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    margin: 0; 
+}
+.login-box { 
+    background-color: #FFF; 
+    padding: 40px; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+    width: 100%; 
+    max-width: 350px; 
+    text-align: center; 
+}
+input { 
+    width: 100%; 
+    padding: 12px; 
+    margin: 10px 0 20px; 
+    border: 1px solid #E5E7EB; 
+    border-radius: 8px; 
+    box-sizing: border-box; 
+    font-family: inherit; 
+}
+button { 
+    width: 100%; 
+    padding: 12px; 
+    background-color: #4F46E5; 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 500; 
+    cursor: pointer; 
+    font-size: 16px; 
+}
+button:hover { 
+    background-color: #4338CA; 
+}
