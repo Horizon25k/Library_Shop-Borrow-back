@@ -8,11 +8,18 @@
 </head>
 <body onload="init()">
     <div class="container">
-        <div class="header-bar">
-            <h2> ระบบจัดการหนังสือ</h2>
+        <nav class="navbar">
+        <div class="nav-left">
+            <div class="nav-brand"> Library Shop</div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">จัดการหนังสือ</a></li>
+                <li><a href="Borrow-back.html">ยืม-คืน หนังสือ</a></li> </ul>
+        </div>
+        <div class="nav-right">
+            <span class="admin-name"> สวัสดี, เจ้าหน้าที่</span>
             <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
         </div>
-        
+    </nav>
         <form id="libraryForm" class="add-library-form" onsubmit="return false;">
             <input type="text" id="title" placeholder="ชื่อหนังสือ">
             <input type="text" id="author" placeholder="ผู้แต่ง">
