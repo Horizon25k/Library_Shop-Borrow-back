@@ -184,5 +184,51 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// [8] ยืมหนังสือ
+app.post('/api/borrow', async(req,res) => {
+    const client = await db.connect();
+
+    try{
+        const {book_id,borrower_name,borrower_contact} = req.body;
+        const checkBook = await client.query('SELECT title, status_id FROM books WHERE id = $1' , [book_id]);
+
+        if(checkBook.rows.length === 0) {
+            return res.status(400).json({message: 'ไม่พบรหัสหนังสือในระบบ'})
+        }
+        if(checkBook.rows[0].status_id === 2) {
+            return res.status(400).json({message:'หนังสือนี้ถูกยืมไปเเล้ว'})
+        }
+        if(checkBook.rows[0].status_id === 3) {
+            return res.status(400).json({message:'หนังสือนี้อยู่ระหว่างการส่งซ้อม'})
+        }
+        
+        const borrowDate = new Date();
+        const returnDate = new Date();
+        returnDate.setDate(borrowDate.getDate() + 7);
+
+        await client.query('BEGIN');
+
+        const sql = `INSERT INTO borrow_records (book_id,borrower_name,borrower_contact,borrow_date,return_date,status)
+                    VALUES ($1 , $2 , $3 , $4 , $5 , 'borrowing')
+                    `;
+        await client.query(sql, [book_id,borrower_name,borrower_contact,borrowDate,returnDate]);
+
+        await client.query(`UPDATE books SET status_id = 2  WHERE id = $1 `, [book_id] );
+        await client.query('COMMIT');
+
+        res.json ({
+            message:'บันทึกการยืมสำเร็จ',
+            book_title: checkBook.rows[0].title,
+            returnDate: returnDate.toLocaleDateString('th-TH')
+        });
+    }catch(err){
+        await client.query('ROLLBACK');
+        console.error('Borrow Error:',err);
+        res.status(500).json({message:'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์'});
+    } finally {
+        client.release();
+    }
+})
+
 // สั่งให้ Server เริ่มทำงาน
 app.listen(3000, () => console.log(` Server running on port 3000`));

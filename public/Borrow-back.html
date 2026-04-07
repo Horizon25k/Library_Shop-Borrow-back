@@ -1,23 +1,98 @@
 <!DOCTYPE html >
 <html lang="th">
     <head>
-        <meta charset="UTF-8">
-        <title>ระบบยืมคืนหนังสือ</title>
-        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/css/style.css">
-        <body>
-            <div class="container">
-                <nav class="navbar">
-                <div class="nav-left">
-                        <div class="nav-brand"> Library Shop</div>
-                            <ul class="nav-links">
-                                <li><a href="index.html" >จัดการหนังสือ</a></li>
-                                <li><a href="Borrow-back.html" class="active">ยืม-คืน หนังสือ</a></li></ul>
-                </div>
-            </div>
-            <script>
+    <meta charset="UTF-8">
+    <title>ระบบยืม-คืนหนังสือ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="nav-brand">Library Shop</div>
+            <ul class="nav-links">
+                <li><a href="index.html">จัดการหนังสือ</a></li>
+                <li><a href="Borrow-back.html" class="active">ยืม-คืน หนังสือ</a></li>
+            </ul>
+        </div>
+        <div class="nav-right">
+            <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+        </div>
+    </nav>
 
-            </script>
-        </body>
-    </head>
+    <div class="container">
+        <h2> ระบบทำรายการ ยืม - คืน</h2>
+
+        <div class="action-container">
+            
+            <div class="action-card">
+                <h3 style="color: var(--primary);"> ยืมหนังสือ</h3>
+                <form id="borrowForm" onsubmit="return false;">
+                    <div class="input-group">
+                        <label>รหัสหนังสือ (ID)</label>
+                        <input type="number" id="borrow_book_id" placeholder="เช่น 1, 2, 3..." required>
+                    </div>
+                    <div class="input-group">
+                        <label>ชื่อ-นามสกุล ผู้ยืม</label>
+                        <input type="text" id="borrower_name" placeholder="ระบุชื่อผู้ยืม..." required>
+                    </div>
+                    <div class="input-group">
+                        <label>ข้อมูลติดต่อ (เบอร์โทร หรือ อีเมล)</label>
+                        <input type="text" id="borrower_contact" placeholder="ระบุข้อมูลการติดต่อ..." required>
+                    </div>
+                    <button type="button" class="btn-primary full-width" onclick="borrowBook()">บันทึกการยืม</button>
+                </form>
+            </div>
+
+            <div class="action-card">
+                <h3 style="color: #10B981;">คืนหนังสือ</h3>
+                <form id="returnForm" onsubmit="return false;">
+                    <div class="input-group">
+                        <label>รหัสหนังสือ (ID)</label>
+                        <input type="number" id="return_book_id" placeholder="ระบุ ID หนังสือที่นำมาคืน..." required>
+                    </div>
+                    <button type="button" class="btn-success" onclick="returnBook()">บันทึกการคืน</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        async function borrowBook() {
+            const book_id = document.getElementById('borrow_book_id').value;
+            const borrower_name = document.getElementById('borrower_name').value;
+            const borrower_contact = document.getElementById('borrower_contact').value;
+
+            if (!book_id || !borrower_name || ! borrower_contact){
+                alert('กรุณากรอกข้อมูลให้ครบถ่วน');
+                return;
+            }
+
+            try{
+                const response = await fetch('/api/borrow', {
+                    method:'POST',
+                    headers: {'Content-Type' : 'application/json'},
+                    body: JSON.stringify({
+                        book_id:book_id,
+                        borrower_name:borrower_name,
+                        borrower_contact:borrower_contact
+                    })
+                });
+
+                const result = await response.json();
+
+                if(response.ok) {
+                    alert(`${result.message}\n\nหนังสือ: ${result.book_title}\nกำหนดคืน: ${result.returnDate}`);
+                    document.getElementById('borrowForm').reset();
+                }else{
+                    alert(`ผิดพลาด:${result.message}`);
+                }
+            }catch(err){
+                console.error(err);
+                alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+            }
+        }
+    </script>
 </html>

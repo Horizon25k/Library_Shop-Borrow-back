@@ -264,3 +264,55 @@ td img {
     margin-top: 40px;
     margin-bottom: 40px;
 }
+
+.action-card {
+    background-color: #F9FAFB;
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    flex: 1; /* แบ่งพื้นที่เท่าๆ กัน */
+    min-width: 300px;
+}
+
+.action-card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+/* ปุ่มสำหรับคืนหนังสือ (สีเขียว) */
+.btn-success {
+    background-color: #10B981;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-success:hover { 
+    background-color: #059669; 
+}
+
+.full-width { 
+    width: 100%; 
+    margin-top: 10px; 
+}
+
+label { 
+    font-size: 14px; 
+    font-weight: 500; 
+    color: var(--text-muted); 
+    display: block; 
+    margin-bottom: 10px; 
+}
+
+.input-group { 
+    margin-bottom: 24px; 
+}
