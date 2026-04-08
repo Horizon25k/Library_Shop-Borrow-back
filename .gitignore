@@ -6,4 +6,3 @@ public/images/*
 
 # ยกเว้น! (เครื่องหมาย !) ให้จำไฟล์ no-image.png หรือรูป Default เอาไว้
 !public/images/no-image.png
-!public/images/no-cover.png
