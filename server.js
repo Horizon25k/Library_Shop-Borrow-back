@@ -5,6 +5,7 @@ const db = require('./config/db'); // นำเข้าตัวเชื่อ
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const findPrefix = require('npm2/lib/utils/find-prefix');
 const SECRET_KEY = 'MySuperSecretLibraryKey'; // กุญแจลับสำหรับเซิร์ฟเวอร์
 
 const app = express();
@@ -229,6 +230,58 @@ app.post('/api/borrow', async(req,res) => {
         client.release();
     }
 })
+
+// [9] คืนหนังสือ
+app.post('/api/returnBook' , async (req,res) => {
+    const client = await db.connect();
+
+    try{
+        const {book_id} = req.body
+        const findRecord = await client.query(`SELECT id, return_date, borrower_name 
+                                                FROM borrow_records 
+                                                WHERE book_id = $1 AND status = 'borrowing'`, [book_id]);
+        if(findRecord.rows.length === 0 ){
+            return res.status(400).json({message:'ไม่พบข้อมูลการยืมของหนังสือเล่มนี้'})
+        }
+
+        const record = findRecord.rows[0];
+        const dueDate = new Date(record.return_date);
+        const today = new Date();
+
+        dueDate.setHours(0,0,0,0);
+        today.setHours(0,0,0,0);
+
+        let overDueday = 0;
+        let fine = 0;
+        const finePriceDay = 10;
+
+        if(today > dueDate){
+            const diffTime = Math.abs(today - dueDate);
+            overDueday = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            fine = overDueday * finePriceDay;
+        }
+
+        await client.query('BEGIN');
+
+        await client.query(`UPDATE borrow_records SET status = 'returned' WHERE id = $1`, [record.id]);
+        await client.query('UPDATE books SET status_id = 1 WHERE id = $1' , [book_id]);
+        
+        await client.query('COMMIT');
+
+        res.json({
+            message: 'บันทึกการคืนสำเร็จ',
+            borrower_name: record.borrower_name,
+            overDueday: overDueday,
+            fine: fine
+        })
+    } catch(err){
+        await client.query('ROLLBACK');
+        console.error('Return Error:' ,err);
+        res.status(500).json({message:'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์'})
+    }finally{
+        client.release();
+    }
+});
 
 // สั่งให้ Server เริ่มทำงาน
 app.listen(3000, () => console.log(` Server running on port 3000`));

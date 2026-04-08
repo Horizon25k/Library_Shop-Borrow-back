@@ -94,5 +94,38 @@
                 alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
             }
         }
+
+        async function returnBook() {
+            const book_id = document.getElementById('return_book_id').value;
+
+            if(!book_id){
+                alert('กรุณากรอกIDหนังสือเพื่อทำการคืน');
+                return;
+            }
+
+            try{
+                const response = await fetch ('/api/returnBook',{
+                    method:"POST",
+                    headers: {'Content-Type' : 'application/json'},
+                    body: JSON.stringify({book_id: book_id})
+                })
+
+                const result = await response.json();
+
+                if(response.ok) {
+                    if(result.overDueday > 0){
+                        alert(`${result.message}\n\nผู้ยืม: ${ result.borrower_name}\nเลยกำหนด: ${result.overDueday} วันที่\nค่าปรับ: ${result.fine} บาท`)
+                    }else{
+                        alert(`${result.message}\n\nขอบคุณที่ส่งคืนตรงเวลาครับ`);
+                    }
+                }else {
+                    
+                    alert(`ผิดพลาด: ${result.message}`);
+                }
+            }catch(err){
+                console.error('err');
+                alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+            }
+        }
     </script>
 </html>
