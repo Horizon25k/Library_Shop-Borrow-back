@@ -202,6 +202,13 @@ app.post('/api/borrow', async(req,res) => {
         if(checkBook.rows[0].status_id === 3) {
             return res.status(400).json({message:'หนังสือนี้อยู่ระหว่างการส่งซ่อม'})
         }
+
+        const checkQuota = await client.query(`SELECT COUNT(*) FROM borrow_records WHERE borrower_name = $1 AND status = 'borrowing'`, [borrower_name]);
+        const borrowedCount = parseInt(checkQuota.rows[0].count);
+
+        if(borrowedCount >= 5){
+            return res.status(400).json({message: `ผู้ใช้งานนี้ยืมหนังสือครบโควต้า 5 เล่มแล้ว (กำลังยืมอยู่ ${borrowedCount} เล่ม)`}) 
+        }
         
         const borrowDate = new Date();
         const returnDate = new Date();
@@ -209,9 +216,8 @@ app.post('/api/borrow', async(req,res) => {
 
         await client.query('BEGIN');
 
-        const sql = `INSERT INTO borrow_records (book_id,borrower_name,borrower_contact,borrow_date,return_date,status)
-                    VALUES ($1 , $2 , $3 , $4 , $5 , 'borrowing')
-                    `;
+        const sql = `INSERT INTO borrow_records (book_id, borrower_name, borrower_contact, borrow_date, return_date, status)
+                    VALUES ($1 , $2 , $3 , $4 , $5 , 'borrowing')`;
         await client.query(sql, [book_id,borrower_name,borrower_contact,borrowDate,returnDate]);
 
         await client.query(`UPDATE books SET status_id = 2  WHERE id = $1 `, [book_id] );

@@ -20,7 +20,7 @@
             <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
         </div>
     </nav>
-
+    <div id="notificationBox"></div>
     <div class="container">
         <h2> ระบบทำรายการ ยืม - คืน</h2>
 
@@ -60,6 +60,23 @@
 
     <script>
 
+        function showMessage(htmlMessage, isSuccess) {
+            const notifBox = document.getElementById('notificationBox');
+            notifBox.style.display = 'block';
+            notifBox.innerHTML = htmlMessage;
+            
+            if(isSuccess) {
+                notifBox.className = 'notify-success';
+            } else {
+                notifBox.className = 'notify-error';
+            }
+
+            
+            if(isSuccess) {
+                setTimeout(() => { notifBox.style.display = 'none'; }, 5000);
+            }
+        }
+
         async function borrowBook() {
             const book_id = document.getElementById('borrow_book_id').value;
             const borrower_name = document.getElementById('borrower_name').value;
@@ -84,14 +101,14 @@
                 const result = await response.json();
 
                 if(response.ok) {
-                    alert(`${result.message}\n\nหนังสือ: ${result.book_title}\nกำหนดคืน: ${result.returnDate}`);
+                    showMessage(`<strong>${result.message}</strong><br>หนังสือ: ${result.book_title}<br>กำหนดคืน: ${result.returnDate}`, true);
                     document.getElementById('borrowForm').reset();
                 }else{
-                    alert(`ผิดพลาด:${result.message}`);
+                    showMessage(`ผิดพลาด: ${result.message}`, false);
                 }
             }catch(err){
                 console.error(err);
-                alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+                showMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', false);
             }
         }
 
@@ -99,7 +116,7 @@
             const book_id = document.getElementById('return_book_id').value;
 
             if(!book_id){
-                alert('กรุณากรอกIDหนังสือเพื่อทำการคืน');
+                showMessage('กรุณากรอก ID หนังสือเพื่อทำการคืน', false);
                 return;
             }
 
@@ -114,17 +131,17 @@
 
                 if(response.ok) {
                     if(result.overDueday > 0){
-                        alert(`${result.message}\n\nผู้ยืม: ${ result.borrower_name}\nเลยกำหนด: ${result.overDueday} วันที่\nค่าปรับ: ${result.fine} บาท`)
+                        showMessage(`<strong>${result.message}</strong><br>ผู้ยืม: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
                     }else{
-                        alert(`${result.message}\n\nขอบคุณที่ส่งคืนตรงเวลาครับ`);
+                        showMessage(`<strong>${result.message}</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
                     }
                 }else {
                     
-                    alert(`ผิดพลาด: ${result.message}`);
+                    showMessage(`ผิดพลาด: ${result.message}`, false);
                 }
             }catch(err){
                 console.error('err');
-                alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+                showMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', false);
             }
         }
     </script>
