@@ -287,12 +287,14 @@
                         }
                     });
                     
+                    const result = await response.json();
+
                     if (response.ok) {
-                        showMessage('ลบข้อมูลสำเร็จ', true); 
+                        showMessage(result.message, true);
                         closeModal();
                         await loadlibrary(); 
                     } else {
-                        showMessage('ลบข้อมูลล้มเหลว', false);
+                        showMessage(result.message || 'ลบข้อมูลล้มเหลว', false);
                     }
                 } catch(err) { console.error('Error:', err); }
             }

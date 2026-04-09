@@ -181,14 +181,32 @@ app.put('/api/libraryshop/:id', authenticateToken, upload.single('images'), asyn
 app.delete('/api/books/:id', authenticateToken, async (req, res) => {
     try {
         const bookid = req.params.id;
-        const sql = "DELETE FROM books WHERE id = $1";
-        await db.query(sql, [bookid]);
 
-        await logActivity(req.user.id, 'DELETE_BOOK', `ลบหนังสือ ID: ${bookid}`);
+        // 1. ดึงข้อมูลหนังสือมาเช็คสถานะก่อน
+        const checkBook = await db.query("SELECT status_id, title FROM books WHERE id = $1", [bookid]);
+        
+        if (checkBook.rows.length === 0) {
+            return res.status(404).json({ message: "ไม่พบข้อมูลหนังสือนี้" });
+        }
 
-        res.send({ message: "ลบหนังสือสำเร็จ" });
+        // 2. ตรวจสอบว่าหนังสือถูกยืมอยู่หรือไม่ 
+        if (checkBook.rows[0].status_id === 2) {
+            return res.status(400).json({ message: "ลบไม่ได้! หนังสือเล่มนี้กำลังถูกลูกค้ายืมอยู่" });
+        }
+
+        // 3. ถ้าไม่ได้ถูกยืมอยู่ ให้ลบประวัติเก่าๆ ทิ้งก่อน
+        await db.query("DELETE FROM borrow_records WHERE book_id = $1", [bookid]);
+
+        // 4. ลบตัวหนังสือออกจากระบบ
+        await db.query("DELETE FROM books WHERE id = $1", [bookid]);
+
+        // 5. บันทึก Log
+        await logActivity(req.user.id, 'DELETE_BOOK', `ลบหนังสือ ID: ${bookid} (${checkBook.rows[0].title})`);
+
+        res.json({ message: "ลบหนังสือสำเร็จ" });
     } catch (error) {
-        res.status(500).send({ error: error.message });
+        console.error("Delete Error:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
     }
 });
 
