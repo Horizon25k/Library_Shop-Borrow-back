@@ -6,7 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body onload="init()">
     
     <nav class="navbar">
         <div class="nav-left">
@@ -34,12 +34,8 @@
                         <input type="number" id="borrow_book_id" placeholder="เช่น 1, 2, 3..." required>
                     </div>
                     <div class="input-group">
-                        <label>ชื่อ-นามสกุล ผู้ยืม</label>
-                        <input type="text" id="borrower_name" placeholder="ระบุชื่อผู้ยืม..." required>
-                    </div>
-                    <div class="input-group">
-                        <label>ข้อมูลติดต่อ (เบอร์โทร หรือ อีเมล)</label>
-                        <input type="text" id="borrower_contact" placeholder="ระบุข้อมูลการติดต่อ..." required>
+                        <label>Member ID</label>
+                        <input type="text" id="Member_id" placeholder="รหัสสมาชิก..." required>
                     </div>
                     <button type="button" class="btn-primary full-width" onclick="borrowBook()">บันทึกการยืม</button>
                 </form>
@@ -52,10 +48,31 @@
                         <label>รหัสหนังสือ (ID)</label>
                         <input type="number" id="return_book_id" placeholder="ระบุ ID หนังสือที่นำมาคืน..." required>
                     </div>
+                    <div class="input-group">
+                        <label>Member ID</label>
+                        <input type="text" id="Member_id_return" placeholder="รหัสสมาชิก..." required>
+                    </div>
                     <button type="button" class="btn-success" onclick="returnBook()">บันทึกการคืน</button>
                 </form>
             </div>
         </div>
+        </div> 
+        <div class="action-card dashboard-card">
+    <div class="header-bar">
+        <h3 style="color: #F59E0B; margin: 0;">รายการหนังสือที่ยังไม่คืน (ค้างส่ง)</h3>
+        
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="searchMemberId" placeholder="ค้นหา Member ID..." 
+                    oninput="filterActiveBorrows()" 
+                    style="width: 160px; padding: 8px 12px; margin-bottom: 0; font-size: 14px;">
+            
+            <button class="btn-secondary" onclick="loadActiveBorrowers()">รีเฟรช</button>
+        </div>
+    </div>
+    
+    <div id="active_display" class="table-container">
+        </div>
+</div>
     </div>
 
     <script>
@@ -77,13 +94,16 @@
             }
         }
 
+        async function init() {
+            loadActiveBorrowers()
+        }
+
         async function borrowBook() {
             const book_id = document.getElementById('borrow_book_id').value;
-            const borrower_name = document.getElementById('borrower_name').value;
-            const borrower_contact = document.getElementById('borrower_contact').value;
+            const Member_id = document.getElementById('Member_id').value;
 
-            if (!book_id || !borrower_name || ! borrower_contact){
-                alert('กรุณากรอกข้อมูลให้ครบถ่วน');
+            if (!book_id || !Member_id ){
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', false);
                 return;
             }
 
@@ -93,8 +113,7 @@
                     headers: {'Content-Type' : 'application/json'},
                     body: JSON.stringify({
                         book_id:book_id,
-                        borrower_name:borrower_name,
-                        borrower_contact:borrower_contact
+                        Member_id:Member_id,
                     })
                 });
 
@@ -103,6 +122,7 @@
                 if(response.ok) {
                     showMessage(`<strong>${result.message}</strong><br>หนังสือ: ${result.book_title}<br>กำหนดคืน: ${result.returnDate}`, true);
                     document.getElementById('borrowForm').reset();
+                    window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
                 }else{
                     showMessage(`ผิดพลาด: ${result.message}`, false);
                 }
@@ -114,9 +134,10 @@
 
         async function returnBook() {
             const book_id = document.getElementById('return_book_id').value;
+            const Member_id = document.getElementById('Member_id_return').value;
 
-            if(!book_id){
-                showMessage('กรุณากรอก ID หนังสือเพื่อทำการคืน', false);
+            if(!book_id || !Member_id ){
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วนเพื่อทำการคืนหนังสือ', false);
                 return;
             }
 
@@ -124,16 +145,21 @@
                 const response = await fetch ('/api/returnBook',{
                     method:"POST",
                     headers: {'Content-Type' : 'application/json'},
-                    body: JSON.stringify({book_id: book_id})
-                })
+                    body: JSON.stringify({
+                        book_id: book_id,
+                        Member_id: Member_id
+                    })
+                });
 
                 const result = await response.json();
 
                 if(response.ok) {
                     if(result.overDueday > 0){
                         showMessage(`<strong>${result.message}</strong><br>ผู้ยืม: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
+                        window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
                     }else{
                         showMessage(`<strong>${result.message}</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
+                        window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
                     }
                 }else {
                     
@@ -144,5 +170,115 @@
                 showMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', false);
             }
         }
+
+       // ฟังก์ชันโหลดรายชื่อลูกค้าที่ยังไม่คืนหนังสือ
+        let allActiveData = []; // ตัวแปรสำหรับเก็บข้อมูลทั้งหมดเพื่อใช้ค้นหา
+
+        // 1. ฟังก์ชันดึงข้อมูลจาก Server
+        async function loadActiveBorrowers() {
+            const displayDiv = document.getElementById('active_display');
+            displayDiv.innerHTML = '<p class="text-center text-gray message-box">กำลังโหลดข้อมูล...</p>';
+
+            try {
+                const response = await fetch('/api/active-borrows');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    displayDiv.innerHTML = '<p class="text-center text-danger message-box">โหลดข้อมูลล้มเหลว</p>';
+                    return;
+                }
+
+                allActiveData = data; // เก็บข้อมูลลงตัวแปรกลาง
+                renderActiveTable(allActiveData); // สั่งให้วาดตาราง
+
+            } catch (err) {
+                console.error(err);
+                displayDiv.innerHTML = '<p class="text-center text-danger message-box">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</p>';
+            }
+        }
+
+        // 2. ฟังก์ชันสำหรับกรองข้อมูล 
+        function filterActiveBorrows() {
+            const searchTerm = document.getElementById('searchMemberId').value.trim();
+            
+            if (!searchTerm) {
+                renderActiveTable(allActiveData);
+                return;
+            }
+
+            // กรองข้อมูลเฉพาะ Member ID ที่ตรงกับคำค้นหา
+            const filtered = allActiveData.filter(item => 
+                item.member_id.toString().includes(searchTerm)
+            );
+
+            renderActiveTable(filtered);
+        }
+
+        // 3. ฟังก์ชันสำหรับวาดตาราง HTML 
+        function renderActiveTable(data) {
+            const displayDiv = document.getElementById('active_display');
+
+            if (data.length === 0) {
+                displayDiv.innerHTML = '<p class="text-center text-success message-box">ไม่พบข้อมูลรายการที่ค้นหา</p>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr class="table-header-gray">
+                            <th>รหัสยืม</th>
+                            <th>ID หนังสือ</th>
+                            <th>ผู้ยืม (ติดต่อ)</th>
+                            <th>หนังสือที่ยืม</th>
+                            <th>ที่อยู่จัดส่ง</th>
+                            <th>วันที่ยืม</th>
+                            <th>กำหนดคืน</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(item => {
+                const borrowDate = new Date(item.borrow_date).toLocaleDateString('th-TH');
+                const dueDateObj = new Date(item.due_date);
+                const dueDate = dueDateObj.toLocaleDateString('th-TH');
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                dueDateObj.setHours(0,0,0,0);
+                
+                const isOverdue = today > dueDateObj;
+                const dueDateClass = isOverdue ? 'text-danger' : '';
+                const overdueBadge = isOverdue ? '<br><span class="overdue-badge">เลยกำหนด</span>' : '';
+
+                html += `
+                    <tr>
+                        <td class="text-gray">#${item.borrow_id}</td>
+                        <td><span class="badge-gray">B-${item.book_id}</span></td>
+                        <td class="text-left">
+                            <div style="margin-bottom: 4px;">
+                                <span class="badge-blue">M-${item.member_id}</span>
+                                <strong>${item.member_name}</strong>
+                            </div>
+                            <span class="text-contact">📞 ${item.member_contact}</span>
+                        </td>
+                        <td class="text-left" style="font-weight: 500;">${item.book_title}</td>
+                        <td class="text-left">
+                            <div class="truncate-text" title="${item.member_address}">
+                                ${item.member_address || '-'}
+                            </div>
+                        </td>
+                        <td>${borrowDate}</td>
+                        <td class="${dueDateClass}">${dueDate} ${overdueBadge}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            displayDiv.innerHTML = html;
+        }
+
+        window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
     </script>
 </html>

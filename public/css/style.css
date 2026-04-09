@@ -19,7 +19,7 @@ body {
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
     background-color: var(--surface);
     padding: 30px 40px;
@@ -267,11 +267,11 @@ td img {
 
 .action-container {
     display: flex;
-    flex-direction: column; /*  เพิ่มบรรทัดนี้: สั่งให้กล่องลูกเรียงต่อกันแนวตั้ง */
-    gap: 32px; /*  ระยะห่างระหว่างกล่องบน (ยืม) และกล่องล่าง (คืน) ปรับเลขได้ตามชอบครับ */
+    flex-direction: column;
+    gap: 32px; 
     margin-top: 20px;
-    max-width: 800px; /* 💡 แนะนำให้เพิ่มบรรทัดนี้: เพื่อไม่ให้กล่องมันยืดกว้างเต็มจอจนเกินไปครับ */
-    margin-left: auto; /* 💡 จัดให้อยู่กึ่งกลางหน้าจอ */
+    max-width: 850px;
+    margin-left: auto; 
     margin-right: auto;
 }
 .action-card {
@@ -328,11 +328,17 @@ label {
 
 #notificationBox {
     display: none; 
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-size: 15px;
-    line-height: 1.5;
+    
+    position: fixed !important;
+    top: 90px !important; 
+    right: 24px !important;
+    z-index: 9999 !important; 
+    width: 350px !important; 
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important; 
+    padding: 16px !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
 }
 .notify-success {
     background-color: #D1FAE5;
@@ -343,4 +349,71 @@ label {
     background-color: #FEE2E2;
     color: #991B1B;
     border: 1px solid #EF4444;
+}
+
+.dashboard-card {
+    margin-top: 40px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.table-header-gray {
+    background-color: var(--bg-color); /* ใช้สีเทาอ่อนจากตัวแปรของคุณ */
+}
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-gray { color: var(--text-muted); }
+.text-danger { color: var(--danger); font-weight: 500; }
+.text-success { color: #10B981; }
+.text-contact { font-size: 13px; color: var(--text-muted); }
+
+.overdue-badge {
+    font-size: 12px;
+    background-color: #FEE2E2;
+    color: #991B1B;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    border: 1px solid #F87171;
+}
+
+.message-box {
+    padding: 30px;
+    font-size: 16px;
+}
+
+.badge-blue {
+    background-color: #DBEAFE;
+    color: #1E3A8A;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 6px;
+}
+
+.badge-gray {
+    background-color: #F3F4F6;
+    color: #4B5563;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid #E5E7EB;
+}
+
+.truncate-text {
+    max-width: 250px; 
+    white-space: normal;  
+    word-wrap: break-word;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
 }
