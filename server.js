@@ -403,5 +403,21 @@ app.get('/api/active-borrows', async (req, res) => {
     }
 });
 
+// ==========================================
+// [11] ดึงข้อมูลเจ้าหน้าที่ที่ล็อกอินอยู่
+// ==========================================
+app.get('/api/lodeUser', authenticateToken , async (req,res) => {
+    try{
+        const {rows} = await db.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
+        }
+        res.json({ name: rows[0].name });
+    } catch(err){
+        console.error('Load User Error:', err);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+    }
+})
+
 // สั่งให้ Server เริ่มทำงาน
 app.listen(3000, () => console.log(`Server running on port 3000`));

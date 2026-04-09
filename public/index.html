@@ -20,7 +20,7 @@
                 </ul>
             </div>
             <div class="nav-right">
-                <span class="admin-name"> สวัสดี, เจ้าหน้าที่</span>
+                <span class="admin-name" id="adminNameDisplay"> สวัสดี, กำลังโหลด...</span>
                 <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
             </div>
         </nav>
@@ -92,12 +92,37 @@
                 notifBox.style.display = 'none'; 
             }, 10000); 
         }
+        // 0. ฟังก์ชันโหลดชื่อเจ้าหน้าที่
+        async function loadCurrentUser() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/lodeUser', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${user.name}</strong>`;
+                } else {
+                    document.getElementById('adminNameDisplay').innerText = 'ไม่พบชื่อเจ้าหน้าที่';
+                }
+            } catch (err) {
+                console.error('Failed to load user:', err);
+            }
+        }
 
         // 1. ฟังก์ชันเริ่มต้นทำงานตอนโหลดหน้าเว็บ
         async function init() {
-            await loadStatus();     
-            await loadCategories(); 
-            await loadlibrary();
+            await Promise.all([
+                loadCurrentUser(),
+                loadStatus(),
+                loadCategories(),
+                loadlibrary()
+            ]);
         }
 
         // 2. ดึงข้อมูลหมวดหมู่มาใส่ใน Dropdown
