@@ -1,0 +1,105 @@
+หากคุณนำโค้ดนี้ไปรันในฐานข้อมูลที่เคยมีการสร้างตารางไว้แล้วบางส่วน ระบบอาจจะฟ้อง Error 
+ว่ามีตารางซ้ำได้ถ้าคุณเพิ่งเริ่มต้นและข้อมูลเก่ายังไม่สำคัญ คุณสามารถเคลียร์ตารางเก่าทิ้งทั้งหมดด้วยคำสั่งนี้ (ก่อนที่จะรันคำสั่งด้านล่าง)
+DROP TABLE IF EXISTS activity_logs CASCADE;
+DROP TABLE IF EXISTS borrow_records CASCADE;
+DROP TABLE IF EXISTS books CASCADE;
+DROP TABLE IF EXISTS authors CASCADE;
+DROP TABLE IF EXISTS statuses CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS members CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- ==========================================
+-- ขั้นตอนที่ 1: สร้างตารางหลัก (Master Tables)
+-- ==========================================
+
+-- 1. ตารางผู้ใช้งานระบบ (เจ้าหน้าที่/แอดมิน)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+
+-- 2. ตารางสมาชิก (ลูกค้าที่มายืมหนังสือ)
+CREATE TABLE members (
+    id SERIAL PRIMARY KEY,
+    member_name VARCHAR(100) NOT NULL,
+    member_contact VARCHAR(50),
+    member_address TEXT
+);
+
+-- 3. ตารางหมวดหมู่หนังสือ
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- 4. ตารางสถานะหนังสือ
+CREATE TABLE statuses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- 5. ตารางนักเขียน/ผู้แต่ง
+CREATE TABLE authors (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+
+-- ==========================================
+-- ขั้นตอนที่ 2: สร้างตารางข้อมูลที่มีความสัมพันธ์ (Relational Tables)
+-- ==========================================
+
+-- 6. ตารางหนังสือหลัก
+CREATE TABLE books (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    published_year INT,
+    cover_image VARCHAR(255),
+    author_id INT REFERENCES authors(id) ON DELETE SET NULL,
+    category_id INT REFERENCES categories(id) ON DELETE SET NULL,
+    status_id INT REFERENCES statuses(id) ON DELETE SET NULL
+);
+
+-- 7. ตารางประวัติการยืม-คืนหนังสือ
+CREATE TABLE borrow_records (
+    id SERIAL PRIMARY KEY,
+    book_id INT REFERENCES books(id) ON DELETE CASCADE,
+    member_id INT REFERENCES members(id) ON DELETE CASCADE,
+    borrow_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP NOT NULL,
+    actual_return_date TIMESTAMP
+);
+
+-- 8. ตารางเก็บประวัติการทำงาน (Audit Logs)
+CREATE TABLE activity_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ==========================================
+-- ขั้นตอนที่ 3: แทรกข้อมูลเริ่มต้น (Initial Data) ที่จำเป็น
+-- ==========================================
+
+-- เพิ่มสถานะเริ่มต้นของหนังสือ (สำคัญมาก ระบบยืมคืนต้องใช้ 3 ตัวนี้)
+INSERT INTO statuses (id, name) VALUES 
+(1, 'ว่าง (Available)'),
+(2, 'ถูกยืม (Borrowed)'),
+(3, 'ส่งซ่อม (Repairing)')
+ON CONFLICT (id) DO NOTHING;
+
+-- เพิ่มหมวดหมู่หนังสือเริ่มต้น
+INSERT INTO categories (id, name) VALUES 
+(1, 'นวนิยาย / วรรณกรรม'),
+(2, 'วิทยาศาสตร์ / เทคโนโลยี'),
+(3, 'ประวัติศาสตร์ / สังคม'),
+(4, 'จิตวิทยา / พัฒนาตัวเอง'),
+(5, 'ธุรกิจ / การลงทุน')
+ON CONFLICT (id) DO NOTHING;
+
+
