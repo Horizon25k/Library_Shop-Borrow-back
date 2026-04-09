@@ -39,3 +39,57 @@ button {
 button:hover { 
     background-color: #4338CA; 
 }
+
+@media (max-width: 768px) {
+    
+    .navbar {
+        flex-direction: column;
+        height: auto;
+        padding: 15px 20px;
+        gap: 15px;
+    }
+    .nav-left, .nav-right {
+        flex-direction: column;
+        width: 100%;
+        text-align: center;
+    }
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .container {
+        padding: 20px 15px;
+        margin-top: 20px;
+        width: 95%; /* ไม่ให้ล้นจอ */
+        box-sizing: border-box;
+    }
+    .action-container {
+        flex-direction: column; 
+        gap: 20px;
+    }
+    .action-card {
+        min-width: 100%; 
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    #notificationBox {
+        width: 90% !important;
+        right: 5% !important;
+        top: 20px !important;
+    }
+
+
+    .add-library-form {
+        flex-direction: column;
+        align-items: stretch; 
+    }
+    .add-library-form input, 
+    .add-library-form select, 
+    .add-library-form button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
