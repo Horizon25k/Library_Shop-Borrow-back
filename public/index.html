@@ -11,7 +11,7 @@
     <div class="container">
         <nav class="navbar">
         <div class="nav-left">
-            <div class="nav-brand"> Library Shop</div>
+            <div class="nav-brand">Library Shop</div>
             <ul class="nav-links">
                 <li><a href="index.html" class="active">จัดการหนังสือ</a></li>
                 <li><a href="Borrow-back.html">ยืม-คืน หนังสือ</a></li> </ul>
@@ -116,11 +116,12 @@
                 const books = await response.json();
                 
                 let html = `
-                    <table>
-                        <tr style="background-color:#eee;">
-                            <th>Image</th><th>ID</th><th>Name</th><th>Author</th>
-                            <th>Year</th><th>Status</th><th>Category</th><th>Manage</th>
-                        </tr>
+                    <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+                        <table style="width: 100%; min-width: 800px;">
+                            <tr style="background-color:#eee;">
+                                <th>Image</th><th>ID</th><th>Name</th><th>Author</th>
+                                <th>Year</th><th>Status</th><th>Category</th><th>Manage</th>
+                            </tr>
                 `;
                 books.forEach(b => {
                     html += `
@@ -136,7 +137,7 @@
                         </tr>
                     `;
                 });
-                html += '</table>';
+                html += '</table></div>';
                 document.getElementById('display').innerHTML = html;
             } catch (err) {
                 document.getElementById('display').innerHTML = '<p style="color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';

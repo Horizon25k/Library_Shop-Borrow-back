@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body onload="init()">
-    
+    <div class="container">
     <nav class="navbar">
         <div class="nav-left">
             <div class="nav-brand">Library Shop</div>
@@ -22,11 +22,8 @@
         </div>
     </nav>
     <div id="notificationBox"></div>
-    <div class="container">
         <h2> ระบบทำรายการ ยืม - คืน</h2>
-
         <div class="action-container">
-            
             <div class="action-card">
                 <h3 style="color: var(--primary);"> ยืมหนังสือ</h3>
                 <form id="borrowForm" onsubmit="return false;">
@@ -41,7 +38,6 @@
                     <button type="button" class="btn-primary full-width" onclick="borrowBook()">บันทึกการยืม</button>
                 </form>
             </div>
-
             <div class="action-card">
                 <h3 style="color: #10B981;">คืนหนังสือ</h3>
                 <form id="returnForm" onsubmit="return false;">
@@ -57,7 +53,7 @@
                 </form>
             </div>
         </div>
-        </div> 
+    </div> 
         <div class="action-card dashboard-card">
     <div class="header-bar">
         <h3 style="color: #F59E0B; margin: 0;">รายการหนังสือที่ยังไม่คืน (ค้างส่ง)</h3>
