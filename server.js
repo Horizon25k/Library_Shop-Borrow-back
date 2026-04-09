@@ -1,18 +1,17 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const db = require('./config/db'); // นำเข้าตัวเชื่อมต่อ Database
+const db = require('./config/db'); 
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const findPrefix = require('npm2/lib/utils/find-prefix');
-const SECRET_KEY = 'MySuperSecretLibraryKey'; // กุญแจลับสำหรับเซิร์ฟเวอร์
+const SECRET_KEY = 'MySuperSecretLibraryKey'; 
 
 const app = express();
 
 // --- Middleware (ตั้งค่าพื้นฐาน) ---
-app.use(express.json()); // ให้ Express อ่านข้อมูลแบบ JSON ได้
-app.use(express.static('public')); // อนุญาตให้หน้าเว็บดึงไฟล์จากโฟลเดอร์ public (เช่น ไฟล์รูป, index.html)
+app.use(express.json()); 
+app.use(express.static('public')); 
 
 // --- ตั้งค่าระบบอัปโหลดรูปภาพ (Multer) ---
 const storage = multer.diskStorage({
@@ -23,17 +22,44 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ message: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' });
+
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Token ไม่ถูกต้องหรือหมดอายุ' });
+        
+        req.user = user; //
+        next();
+    });
+}
+
 // ==========================================
 // API ROUTES (เส้นทางรับส่งข้อมูล)
 // ==========================================
 
-// [1] ดึงข้อมูลหนังสือทั้งหมดพร้อมชื่อหมวดหมู่และสถานะ
+// [0] เก็บ log 
+async function logActivity(userId, action, details) {
+    try {
+        const sql = `
+            INSERT INTO activity_logs (user_id, action, details, created_at) 
+            VALUES ($1, $2, $3, NOW() AT TIME ZONE 'Asia/Bangkok')
+        `;
+        await db.query(sql, [userId, action, details]);
+    } catch (err) {
+        console.error('Failed to save activity log:', err);
+    }
+}
+
+// [1] ดึงข้อมูลหนังสือทั้งหมด
 app.get('/api/libraryshop', async (req, res) => {
     try {
         const sql = `
             SELECT 
                 b.*, 
-                a.name AS author, -- ดึงชื่อผู้แต่งจากตาราง authors มาโชว์
+                a.name AS author, 
                 c.name AS categories, 
                 s.name AS status_name
             FROM books b
@@ -49,13 +75,12 @@ app.get('/api/libraryshop', async (req, res) => {
     }
 });
 
-// [2] เพิ่มหนังสือเล่มใหม่ (รับไฟล์รูป 'image')
-app.post('/api/libraryshop', upload.single('image'), async (req, res) => {
+// [2] เพิ่มหนังสือเล่มใหม่
+app.post('/api/libraryshop', authenticateToken, upload.single('image'), async (req, res) => {
     try {
         const { title, author, published_year, status_id, category_id } = req.body;
         const cover_image = req.file ? `/images/${req.file.filename}` : `/images/no-image.png`;
 
-        // 1. จัดการเรื่องผู้แต่ง (Author) ก่อน
         let finalAuthorId = null;
         if (author) {
             const checkAuthor = await db.query('SELECT id FROM authors WHERE name = $1', [author]);
@@ -67,10 +92,11 @@ app.post('/api/libraryshop', upload.single('image'), async (req, res) => {
             }
         }
 
-        // 2. บันทึกหนังสือ 
         const sql = `INSERT INTO books (title, author_id, published_year, cover_image, status_id, category_id) 
                     VALUES($1, $2, $3, $4, $5, $6)`;
         await db.query(sql, [title, finalAuthorId, published_year, cover_image, status_id || null, category_id || null]);
+
+        await logActivity(req.user.id, 'ADD_BOOK', `เพิ่มหนังสือเรื่อง: ${title}`);
 
         res.json({ message: 'บันทึกข้อมูลสำเร็จ!' });
     } catch(err){
@@ -78,7 +104,7 @@ app.post('/api/libraryshop', upload.single('image'), async (req, res) => {
     }
 });
 
-// [3] ดึงรายการหมวดหมู่ (สำหรับ Dropdown)
+// [3] ดึงรายการหมวดหมู่
 app.get('/api/categories', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT * FROM categories');
@@ -88,7 +114,7 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
-// [4] ดึงรายการสถานะ (สำหรับ Dropdown)
+// [4] ดึงรายการสถานะ
 app.get('/api/statuses', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT * FROM statuses');
@@ -98,7 +124,7 @@ app.get('/api/statuses', async (req, res) => {
     }
 });
 
-// [5] ดึงข้อมูลหนังสือ 1 เล่ม (สำหรับป๊อปอัปแก้ไข)
+// [5] ดึงข้อมูลหนังสือ 1 เล่ม
 app.get('/api/libraryshop/:id', async (req, res) => {
     try {
         const { rows } = await db.query('SELECT * FROM books WHERE id = $1', [req.params.id]);
@@ -108,8 +134,8 @@ app.get('/api/libraryshop/:id', async (req, res) => {
     }
 });
 
-// [6] บันทึกการแก้ไขข้อมูลหนังสือ (อัปเดต)
-app.put('/api/libraryshop/:id', upload.single('images'), async (req, res) => {
+// [6] บันทึกการแก้ไขข้อมูลหนังสือ
+app.put('/api/libraryshop/:id', authenticateToken, upload.single('images'), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, author, published_year, status_id, category_id } = req.body;
@@ -141,6 +167,9 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req, res) => {
         }
 
         await db.query(sql, params);
+
+        await logActivity(req.user.id, 'UPDATE_BOOK', `แก้ไขข้อมูลหนังสือ ID: ${id} (ชื่อเรื่อง: ${title})`);
+
         res.json({message: 'อัปเดตข้อมูลสำเร็จ'});
     } catch(err){
         console.error("Update Error:", err);
@@ -149,11 +178,14 @@ app.put('/api/libraryshop/:id', upload.single('images'), async (req, res) => {
 });
 
 // [7] ลบหนังสือ
-app.delete('/api/books/:id', async (req, res) => {
+app.delete('/api/books/:id', authenticateToken, async (req, res) => {
     try {
         const bookid = req.params.id;
         const sql = "DELETE FROM books WHERE id = $1";
         await db.query(sql, [bookid]);
+
+        await logActivity(req.user.id, 'DELETE_BOOK', `ลบหนังสือ ID: ${bookid}`);
+
         res.send({ message: "ลบหนังสือสำเร็จ" });
     } catch (error) {
         res.status(500).send({ error: error.message });
@@ -161,7 +193,7 @@ app.delete('/api/books/:id', async (req, res) => {
 });
 
 // ==========================================
-// 1. API สร้างบัญชีแอดมินอัตโนมัติ (แก้ปัญหารหัส Hash ผิด)
+// 1. API สร้างบัญชีแอดมินอัตโนมัติ 
 // ==========================================
 app.get('/api/setup-admin', async (req, res) => {
     try {
@@ -183,7 +215,6 @@ app.get('/api/setup-admin', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-
         
         const { rows } = await db.query('SELECT * FROM users WHERE username = $1', [username]);
         if (rows.length === 0) {
@@ -197,9 +228,10 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'รหัสผ่านไม่ถูกต้อง' });
         }
 
-        // สร้าง Token อายุ 1 วัน
         const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1d' });
         
+        await logActivity(user.id, 'LOGIN', `ผู้ใช้งาน ${username} เข้าสู่ระบบ`);
+
         res.json({ message: 'เข้าสู่ระบบสำเร็จ!', token: token });
 
     } catch (err) {
@@ -209,13 +241,13 @@ app.post('/api/login', async (req, res) => {
 });
 
 // [8] ยืมหนังสือ
-app.post('/api/borrow', async(req,res) => {
+app.post('/api/borrow', authenticateToken, async(req,res) => {
     const client = await db.connect();
 
     try{
         const {book_id, Member_id} = req.body;
         
-        const checkBook = await client.query('SELECT title, status_id FROM books WHERE id = $1' , [book_id]);
+        const checkBook = await client.query('SELECT title, status_id,id FROM books WHERE id = $1' , [book_id]);
         if(checkBook.rows.length === 0) return res.status(400).json({message: 'ไม่พบรหัสหนังสือในระบบ'});
         if(checkBook.rows[0].status_id === 2) return res.status(400).json({message:'หนังสือนี้ถูกยืมไปเเล้ว'});
         if(checkBook.rows[0].status_id === 3) return res.status(400).json({message:'หนังสือนี้อยู่ระหว่างการส่งซ่อม'});
@@ -236,7 +268,7 @@ app.post('/api/borrow', async(req,res) => {
         
         const borrowDate = new Date();
         const dueDate = new Date();
-        dueDate.setDate(borrowDate.getDate() + 7); // วันกำหนดคืน (+7 วัน)
+        dueDate.setDate(borrowDate.getDate() + 7); 
 
         await client.query('BEGIN');
 
@@ -246,6 +278,8 @@ app.post('/api/borrow', async(req,res) => {
 
         await client.query(`UPDATE books SET status_id = 2 WHERE id = $1 `, [book_id] );
         await client.query('COMMIT');
+
+        await logActivity(req.user.id, 'BORROW', `ทำรายการยืมหนังสือ Books ID:${checkBook.rows[0].id} ให้กับสมาชิก ID: ${Member_id}`);
 
         res.json ({
             message: 'บันทึกการยืมสำเร็จ',
@@ -262,7 +296,7 @@ app.post('/api/borrow', async(req,res) => {
 });
 
 // [9] คืนหนังสือ
-app.post('/api/returnBook' , async (req,res) => {
+app.post('/api/returnBook', authenticateToken, async (req,res) => {
     const client = await db.connect();
 
     try{
@@ -279,8 +313,8 @@ app.post('/api/returnBook' , async (req,res) => {
         if(findRecord.rows.length === 0 ) return res.status(400).json({message:'ไม่พบข้อมูลการยืมของหนังสือเล่มนี้'});
 
         const record = findRecord.rows[0];
-        const dueDate = new Date(record.due_date); // เทียบกับวันกำหนดคืน
-        const today = new Date(); // วันนี้ (วันที่นำมาคืนจริง)
+        const dueDate = new Date(record.due_date); 
+        const today = new Date(); 
 
         dueDate.setHours(0,0,0,0);
         let actualReturnCompare = new Date(today);
@@ -290,7 +324,6 @@ app.post('/api/returnBook' , async (req,res) => {
         let fine = 0;
         const finePriceDay = 10;
 
-        // คำนวณค่าปรับ
         if(actualReturnCompare > dueDate){
             const diffTime = Math.abs(actualReturnCompare - dueDate);
             overDueday = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -303,6 +336,10 @@ app.post('/api/returnBook' , async (req,res) => {
         await client.query(`UPDATE books SET status_id = 1 WHERE id = $1`, [book_id]);
         
         await client.query('COMMIT');
+
+        let logDetail = `รับคืนหนังสือ Book ID: ${book_id} จากMember ID: ${Member_id}`;
+        if (fine > 0) logDetail += ` (มีค่าปรับ ${fine} บาท)`;
+        await logActivity(req.user.id, 'RETURN', logDetail);
 
         res.json({
             message: 'บันทึกการคืนสำเร็จ',
@@ -349,4 +386,4 @@ app.get('/api/active-borrows', async (req, res) => {
 });
 
 // สั่งให้ Server เริ่มทำงาน
-app.listen(3000, () => console.log(` Server running on port 3000`));
+app.listen(3000, () => console.log(`Server running on port 3000`));

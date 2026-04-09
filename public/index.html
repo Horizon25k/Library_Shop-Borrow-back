@@ -8,19 +8,23 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body onload="init()">
+    <div id="notificationBox"></div>
+
     <div class="container">
         <nav class="navbar">
-        <div class="nav-left">
-            <div class="nav-brand">Library Shop</div>
-            <ul class="nav-links">
-                <li><a href="index.html" class="active">จัดการหนังสือ</a></li>
-                <li><a href="Borrow-back.html">ยืม-คืน หนังสือ</a></li> </ul>
-        </div>
-        <div class="nav-right">
-            <span class="admin-name"> สวัสดี, เจ้าหน้าที่</span>
-            <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
-        </div>
-    </nav>
+            <div class="nav-left">
+                <div class="nav-brand">Library Shop</div>
+                <ul class="nav-links">
+                    <li><a href="index.html" class="active">จัดการหนังสือ</a></li>
+                    <li><a href="Borrow-back.html">ยืม-คืน หนังสือ</a></li> 
+                </ul>
+            </div>
+            <div class="nav-right">
+                <span class="admin-name"> สวัสดี, เจ้าหน้าที่</span>
+                <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+            </div>
+        </nav>
+
         <form id="libraryForm" class="add-library-form" onsubmit="return false;">
             <input type="text" id="title" placeholder="ชื่อหนังสือ">
             <input type="text" id="author" placeholder="ผู้แต่ง">
@@ -64,7 +68,6 @@
     </div>
 
     <script>
-
         if (!localStorage.getItem('token')) {
             window.location.href = '/login.html';
         }
@@ -73,6 +76,22 @@
             localStorage.removeItem('token');
             window.location.href = '/login.html';
         }        
+
+            function showMessage(htmlMessage, isSuccess) {
+            const notifBox = document.getElementById('notificationBox');
+            notifBox.style.display = 'block';
+            notifBox.innerHTML = htmlMessage;
+            
+            if(isSuccess) {
+                notifBox.className = 'notify-success';
+            } else {
+                notifBox.className = 'notify-error';
+            }
+
+            setTimeout(() => { 
+                notifBox.style.display = 'none'; 
+            }, 10000); 
+        }
 
         // 1. ฟังก์ชันเริ่มต้นทำงานตอนโหลดหน้าเว็บ
         async function init() {
@@ -129,7 +148,7 @@
                             <td><img src="${b.cover_image}" width="60" height="60"></td>
                             <td style="color: #6B7280;">${b.id}</td>
                             <td>${b.title}</td>
-                            <td>${b.author}</td>
+                            <td>${b.author || '-'}</td>
                             <td>${b.published_year}</td>
                             <td>${b.status_name || '-'}</td>
                             <td>${b.categories || '-'}</td>
@@ -154,11 +173,10 @@
             const images = document.getElementById('images');
 
             if(!title || !author || !published_year || !status_id || !category_id) {
-                alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', false);
                 return;
             }
 
-            // ใช้ FormData เพราะมีการส่งไฟล์รูปภาพ
             const formData = new FormData();
             formData.append('title', title);
             formData.append('author', author);
@@ -167,15 +185,27 @@
             formData.append('category_id', category_id);
             if(images.files[0]) formData.append('image', images.files[0]);
 
+            const token = localStorage.getItem('token');
+
             try {
                 const response = await fetch('/api/libraryshop', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
-                const result = await response.json();
-                alert(result.message);
                 
-                document.getElementById('libraryForm').reset(); // ล้างฟอร์ม
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showMessage('เกิดข้อผิดพลาด: ' + (errorData.message || 'ไม่สามารถบันทึกได้'), false);
+                    return;
+                }
+                
+                const result = await response.json();
+                showMessage(result.message, true); 
+                
+                document.getElementById('libraryForm').reset(); 
                 await loadlibrary(); 
             } catch(err) { console.error("Save Error:", err); }
         }
@@ -187,7 +217,6 @@
                 const res = await fetch(`/api/libraryshop/${id}`);
                 const b = await res.json();
                 
-                // นำข้อมูลที่ได้ไปแปะในช่อง Input
                 document.getElementById('edit_id').value = b.id;
                 document.getElementById('edit_title').value = b.title;
                 document.getElementById('edit_author').value = b.author;
@@ -205,7 +234,6 @@
             document.getElementById('libraryModal').style.display = 'none';
         }
 
-        // ทำให้กดคลิกพื้นที่นอก Modal แล้วปิดหน้าต่างได้
         window.onclick = function(event) {
             if (event.target == document.getElementById('libraryModal')) closeModal();
         }
@@ -224,15 +252,23 @@
             const fileInput = document.getElementById('edit_images');
             if(fileInput.files[0]) formData.append('images', fileInput.files[0]);
 
+            const token = localStorage.getItem('token');
+
             try {
                 const response = await fetch(`/api/libraryshop/${id}`, {
                     method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
+                
                 if(response.ok) {
-                    alert('บันทึกข้อมูลสำเร็จ!');
+                    showMessage('บันทึกข้อมูลสำเร็จ', true); 
                     closeModal();
-                    loadlibrary(); // รีโหลดตาราง
+                    loadlibrary(); 
+                } else {
+                    showMessage('อัปเดตข้อมูลล้มเหลว', false);
                 }
             } catch(err) { console.error("Update Error:", err); }
         }
@@ -240,13 +276,23 @@
         // 9. ลบหนังสือ
         async function deleteLibrary() {
             const id = document.getElementById('edit_id').value;
+            const token = localStorage.getItem('token');
+
             if(confirm('คุณต้องการลบหนังสือเล่มนี้หรือไม่?')) {
                 try {
-                    const response = await fetch(`/api/books/${id}`, { method: 'DELETE' });
+                    const response = await fetch(`/api/books/${id}`, { 
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
                     if (response.ok) {
-                        alert('ลบข้อมูลสำเร็จ');
+                        showMessage('ลบข้อมูลสำเร็จ', true); 
                         closeModal();
                         await loadlibrary(); 
+                    } else {
+                        showMessage('ลบข้อมูลล้มเหลว', false);
                     }
                 } catch(err) { console.error('Error:', err); }
             }

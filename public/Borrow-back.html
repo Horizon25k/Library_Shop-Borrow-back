@@ -22,7 +22,6 @@
         </div>
     </nav>
     <div id="notificationBox"></div>
-        <h2> ระบบทำรายการ ยืม - คืน</h2>
         <div class="action-container">
             <div class="action-card">
                 <h3 style="color: var(--primary);"> ยืมหนังสือ</h3>
@@ -62,7 +61,6 @@
             <input type="text" id="searchMemberId" placeholder="ค้นหา Member ID..." 
                     oninput="filterActiveBorrows()" 
                     style="width: 160px; padding: 8px 12px; margin-bottom: 0; font-size: 14px;">
-            
             <button class="btn-secondary" onclick="loadActiveBorrowers()">รีเฟรช</button>
         </div>
     </div>
@@ -73,6 +71,14 @@
     </div>
 
     <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        } 
 
         function showMessage(htmlMessage, isSuccess) {
             const notifBox = document.getElementById('notificationBox');
@@ -85,10 +91,9 @@
                 notifBox.className = 'notify-error';
             }
 
-            
-            if(isSuccess) {
-                setTimeout(() => { notifBox.style.display = 'none'; }, 5000);
-            }
+            setTimeout(() => { 
+                notifBox.style.display = 'none'; 
+            }, 10000); 
         }
 
         async function init() {
@@ -98,6 +103,7 @@
         async function borrowBook() {
             const book_id = document.getElementById('borrow_book_id').value;
             const Member_id = document.getElementById('Member_id').value;
+            const token = localStorage.getItem('token');
 
             if (!book_id || !Member_id ){
                 showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', false);
@@ -107,7 +113,9 @@
             try{
                 const response = await fetch('/api/borrow', {
                     method:'POST',
-                    headers: {'Content-Type' : 'application/json'},
+                    headers: {  'Content-Type' : 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
                     body: JSON.stringify({
                         book_id:book_id,
                         Member_id:Member_id,
@@ -118,8 +126,10 @@
 
                 if(response.ok) {
                     showMessage(`<strong>${result.message}</strong><br>หนังสือ: ${result.book_title}<br>กำหนดคืน: ${result.returnDate}`, true);
+
                     document.getElementById('borrowForm').reset();
-                    window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
+                    document.getElementById('searchMemberId').value = '';
+                    loadActiveBorrowers();
                 }else{
                     showMessage(`ผิดพลาด: ${result.message}`, false);
                 }
@@ -132,6 +142,7 @@
         async function returnBook() {
             const book_id = document.getElementById('return_book_id').value;
             const Member_id = document.getElementById('Member_id_return').value;
+            const token = localStorage.getItem('token');
 
             if(!book_id || !Member_id ){
                 showMessage('กรุณากรอกข้อมูลให้ครบถ้วนเพื่อทำการคืนหนังสือ', false);
@@ -141,7 +152,9 @@
             try{
                 const response = await fetch ('/api/returnBook',{
                     method:"POST",
-                    headers: {'Content-Type' : 'application/json'},
+                    headers: {  'Content-Type' : 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
                     body: JSON.stringify({
                         book_id: book_id,
                         Member_id: Member_id
@@ -153,11 +166,13 @@
                 if(response.ok) {
                     if(result.overDueday > 0){
                         showMessage(`<strong>${result.message}</strong><br>ผู้ยืม: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
-                        window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
                     }else{
                         showMessage(`<strong>${result.message}</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
-                        window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
                     }
+                    document.getElementById('borrowForm').reset(); // ล้างฟอร์มยืม
+                    document.getElementById('searchMemberId').value = ''; // 🌟 ล้างช่องค้นหา
+                    loadActiveBorrowers();
+
                 }else {
                     
                     showMessage(`ผิดพลาด: ${result.message}`, false);
@@ -185,8 +200,8 @@
                     return;
                 }
 
-                allActiveData = data; // เก็บข้อมูลลงตัวแปรกลาง
-                renderActiveTable(allActiveData); // สั่งให้วาดตาราง
+                allActiveData = data;
+                renderActiveTable(allActiveData);
 
             } catch (err) {
                 console.error(err);

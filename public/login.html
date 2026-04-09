@@ -22,11 +22,13 @@
         async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
+            const token = localStorage.getItem('token');
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
                     body: JSON.stringify({ username, password })
                 });
 
