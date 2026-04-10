@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>เพิ่มบัญชีเจ้าหน้าที่</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css"> </head>
+<body>
+    <div class="container" style="max-width: 500px;">
+        <h2>เพิ่มบัญชีเจ้าหน้าที่ใหม่</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">*เฉพาะเจ้าหน้าที่เป็นผ้ดูเเลระบบเท่านั้นที่จะเพิ่มบัณชีได้</p>
+        
+        <form id="registerForm" onsubmit="return false;" style="margin-top: 20px;">
+            <div class="input-group">
+                <label>ชื่อ-นามสกุล</label>
+                <input type="text" id="reg_name" placeholder="ชื่อจริงเจ้าหน้าที่" required style="width: 100%;">
+            </div>
+            <div class="input-group">
+                <label>ชื่อผู้ใช้งาน (Username)</label>
+                <input type="text" id="reg_username" placeholder="สำหรับใช้ Login" required style="width: 100%;">
+            </div>
+            <div class="input-group">
+                <label>รหัสผ่าน (Password)</label>
+                <input type="password" id="reg_password" placeholder="รหัสผ่านอย่างน้อย 6 ตัว" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" class="btn-primary" onclick="handleRegister()" style="flex: 2;">สร้างบัญชี</button>
+                <button type="button" class="btn-secondary" onclick="window.location.href='/index.html'" style="flex: 1;">กลับ</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // ป้องกันคนที่ไม่ได้ล็อกอินแอบเข้ามาหน้านี้
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login.html';
+        }
+
+        async function handleRegister() {
+            const name = document.getElementById('reg_name').value;
+            const username = document.getElementById('reg_username').value;
+            const password = document.getElementById('reg_password').value;
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ name, username, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    window.location.href = '/index.html'; // สร้างเสร็จกลับหน้าหลัก
+                } else {
+                    alert(result.message);
+                }
+            } catch (err) {
+                alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+            }
+        }
+    </script>
+</body>
+</html>

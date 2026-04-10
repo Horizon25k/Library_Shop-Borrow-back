@@ -127,7 +127,13 @@ app.get('/api/statuses', async (req, res) => {
 // [5] ดึงข้อมูลหนังสือ 1 เล่ม
 app.get('/api/libraryshop/:id', async (req, res) => {
     try {
-        const { rows } = await db.query('SELECT * FROM books WHERE id = $1', [req.params.id]);
+        const sql = `
+            SELECT b.*, a.name AS author 
+            FROM books b 
+            LEFT JOIN authors a ON b.author_id = a.id 
+            WHERE b.id = $1
+        `;
+        const { rows } = await db.query(sql, [req.params.id]);
         res.json(rows[0]);
     } catch(err){
         res.status(500).json({error: err.message});
@@ -408,16 +414,64 @@ app.get('/api/active-borrows', async (req, res) => {
 // ==========================================
 app.get('/api/lodeUser', authenticateToken , async (req,res) => {
     try{
-        const {rows} = await db.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+        // แก้ไข SQL ให้ดึงทั้ง name และ username
+        const {rows} = await db.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
+        
         if (rows.length === 0) {
             return res.status(404).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
         }
-        res.json({ name: rows[0].name });
+        res.json({ 
+            name: rows[0].name,
+            username: rows[0].username 
+        });
     } catch(err){
         console.error('Load User Error:', err);
         res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
     }
 })
+
+// ==========================================
+// [12] สร้างบัญชีผู้ใช้ใหม่ (เฉพาะ Admin ที่ล็อกอินอยู่)
+// ==========================================
+app.post('/api/register', authenticateToken, async (req, res) => {
+    try {
+            // --- ส่วนที่เพิ่มเข้ามาเพื่อเช็คสิทธิ์แอดมิน ---
+        if (req.user.username !== 'admin') {
+            return res.status(403).json({ 
+                message: 'สิทธิ์ไม่เพียงพอ! เฉพาะผู้ใช้งาน admin เท่านั้นที่สามารถเพิ่มบัญชีได้' 
+            });
+        }
+
+        const { username, password, name } = req.body;
+
+        // 1. ตรวจสอบว่ามีข้อมูลครบไหม
+        if (!username || !password || !name) {
+            return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' });
+        }
+
+        // 2. ตรวจสอบว่าชื่อผู้ใช้งานซ้ำหรือไม่
+        const checkUser = await db.query('SELECT id FROM users WHERE username = $1', [username]);
+        if (checkUser.rows.length > 0) {
+            return res.status(400).json({ message: 'ชื่อผู้ใช้งานนี้มีอยู่ในระบบแล้ว' });
+        }
+
+        // 3. เข้ารหัสรหัสผ่าน (Hash Password)
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 4. บันทึกลงฐานข้อมูล
+        const sql = `INSERT INTO users (username, password, name) VALUES ($1, $2, $3) RETURNING id`;
+        const result = await db.query(sql, [username, hashedPassword, name]);
+
+        // 5. บันทึก Log
+        await logActivity(req.user.id, 'CREATE_USER', `สร้างบัญชีใหม่: ${username} (ชื่อ: ${name})`);
+
+        res.json({ message: 'สร้างบัญชีผู้ใช้งานสำเร็จ!', userId: result.rows[0].id });
+
+    } catch (err) {
+        console.error("Register Error:", err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });
+    }
+});
 
 // สั่งให้ Server เริ่มทำงาน
 app.listen(3000, () => console.log(`Server running on port 3000`));

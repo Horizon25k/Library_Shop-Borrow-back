@@ -20,6 +20,7 @@
                 </ul>
             </div>
             <div class="nav-right">
+                <button id="btnRegister" class="btn-secondary" onclick="window.location.href='register.html'" style="display: none; font-size: 14px; padding: 8px 16px;">เพิ่มเจ้าหน้าที่</button>
                 <span class="admin-name" id="adminNameDisplay"> สวัสดี, กำลังโหลด...</span>
                 <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
             </div>
@@ -92,6 +93,7 @@
                 notifBox.style.display = 'none'; 
             }, 10000); 
         }
+
         // 0. ฟังก์ชันโหลดชื่อเจ้าหน้าที่
         async function loadCurrentUser() {
             const token = localStorage.getItem('token');
@@ -99,17 +101,26 @@
 
             try {
                 const response = await fetch('/api/lodeUser', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const user = await response.json();
-                    document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${user.name}</strong>`;
+            
+                document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${user.name}</strong>`;
+
+                // --- ส่วนที่ทำหน้าที่ "ซ่อน/โชว์" ปุ่ม ---
+                const btnReg = document.getElementById('btnRegister');
+                    if (btnReg) {
+                        if (user.username === 'admin') {
+                            btnReg.style.display = 'inline-block';
+                        } else {
+                            btnReg.style.display = 'none';
+                            }
+                        }
                 } else {
-                    document.getElementById('adminNameDisplay').innerText = 'ไม่พบชื่อเจ้าหน้าที่';
-                }
+                        document.getElementById('adminNameDisplay').innerText = 'ไม่พบชื่อเจ้าหน้าที่';
+                    }
             } catch (err) {
                 console.error('Failed to load user:', err);
             }
@@ -237,24 +248,28 @@
 
         // 6. เปิด Modal และดึงข้อมูลหนังสือเล่มนั้นมาแสดง
         async function openModal(id) {
-            console.log("คลิกแล้ว ID คือ:", id);
-            document.getElementById('libraryModal').style.display = 'block';
             try {
-                const res = await fetch(`/api/libraryshop/${id}`);
-                const b = await res.json();
-                console.log("ข้อมูลที่ได้จาก Server:", b);
-                
-                document.getElementById('edit_id').value = b.id;
-                document.getElementById('edit_title').value = b.title;
-                document.getElementById('edit_author').value = b.author;
-                document.getElementById('edit_published_year').value = b.published_year;
-                document.getElementById('edit_status_id').value = b.status_id;
-                document.getElementById('edit_category_id').value = b.category_id;
-                document.getElementById('current_image').src = b.cover_image;
-            } catch(error){
-                alert('ไม่สามารถโหลดข้อมูลหนังสือได้');
-            }
-        }
+            const res = await fetch(`/api/libraryshop/${id}`);
+            const data = await res.json();
+
+            // ใส่ข้อมูลลงในฟอร์มแก้ไข
+            document.getElementById('edit_id').value = data.id;
+            document.getElementById('edit_title').value = data.title;
+        
+            document.getElementById('edit_author').value = data.author || ''; 
+        
+            document.getElementById('edit_published_year').value = data.published_year;
+            document.getElementById('edit_category_id').value = data.category_id || '';
+            document.getElementById('edit_status_id').value = data.status_id || '';
+            
+            document.getElementById('current_image').src = data.cover_image || '/images/no-image.png';
+
+        document.getElementById('libraryModal').style.display = 'block';
+    } catch (err) {
+        console.error("Error loading book data:", err);
+        showMessage('ไม่สามารถโหลดข้อมูลหนังสือได้', false);
+    }
+}
 
         // 7. ปิด Modal
         function closeModal() {

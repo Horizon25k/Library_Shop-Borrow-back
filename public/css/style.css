@@ -196,6 +196,18 @@ button {
     margin-top: 10px; 
 }
 
+.nav-right .btn-secondary {
+    background-color: rgba(79, 70, 229, 0.1);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    transition: all 0.2s ease;
+}
+
+.nav-right .btn-secondary:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
 /* ==========================================
     5. ตารางข้อมูล (Tables)
    ========================================== */
