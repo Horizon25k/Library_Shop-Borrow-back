@@ -40,18 +40,15 @@
             </div>
             <div class="action-card">
                 <h3 style="color: #10B981;">คืนหนังสือ</h3>
-                <form id="returnForm" onsubmit="return false;">
+                <form id="returnSearchForm" onsubmit="return false;">
                     <div class="input-group">
-                        <label>รหัสหนังสือ (ID)</label>
-                        <input type="number" id="return_book_id" placeholder="ระบุ ID หนังสือที่นำมาคืน..." required>
+                        <label>Member ID (ผู้ที่จะคืน)</label>
+                        <input type="text" id="Member_id_return" placeholder="กรอกรหัสสมาชิก..." required>
                     </div>
-                    <div class="input-group">
-                        <label>Member ID</label>
-                        <input type="text" id="Member_id_return" placeholder="รหัสสมาชิก..." required>
-                    </div>
-                    <button type="button" class="btn-success" onclick="returnBook()">บันทึกการคืน</button>
+                    <button type="button" class="btn-success full-width" onclick="searchBorrowerItems()">เช็กรายการที่ยังไม่คืน</button>
                 </form>
-            </div>
+                <div id="return_item_list" style="margin-top: 20px;"></div>
+        </div>
         </div>
     </div> 
         <div class="action-card dashboard-card">
@@ -210,6 +207,117 @@
             }
         }
 
+        // ค้นหาหนังสือที่สมาชิกคนนี้ยังไม่คืน
+        async function searchBorrowerItems() {
+            const memberId = document.getElementById('Member_id_return').value.trim();
+            const listDiv = document.getElementById('return_item_list');
+
+            if (!memberId) {
+                showMessage('กรุณากรอก Member ID เพื่อตรวจสอบ', false);
+                return;
+            }
+
+            const items = allActiveData.filter(item => item.member_id.toString() === memberId);
+
+            if (items.length === 0) {
+                listDiv.innerHTML = '<p class="text-danger" style="font-size: 0.9em; text-align:center;">ไม่พบรายการค้างคืนของสมาชิกท่านนี้</p>';
+                return;
+            }
+
+            let html = '<p style="font-size: 0.9em; margin-bottom: 10px; font-weight: bold;">เลือกเล่มที่ต้องการคืน:</p>';
+    
+            items.forEach(item => {
+                // --- ส่วนการคำนวณค่าปรับ ---
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dueDate = new Date(item.due_date);
+                dueDate.setHours(0, 0, 0, 0);
+
+                let fineInfo = '';
+                const isOverdue = today > dueDate;
+
+                if (isOverdue) {
+                    const diffTime = Math.abs(today - dueDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const finePerDay = 5; // ตั้งค่าปรับวันละ 5 บาท
+                    const totalFine = diffDays * finePerDay;
+
+                    fineInfo = `
+                        <div style="margin-top: 5px; padding: 5px; background: #FEF2F2; border-radius: 4px; border: 1px solid #FECACA;">
+                            <span style="color: #DC2626; font-size: 0.85em; font-weight: 600;">
+                                เลยกำหนด ${diffDays} วัน (ค่าปรับ: ${totalFine.toLocaleString()} บาท)
+                            </span>
+                        </div>
+                        `;
+                } else {
+                    fineInfo = `<div style="color: #059669; font-size: 0.8em; margin-top: 5px;">ยังไม่เกินกำหนดคืน</div>`;
+                }
+                // -----------------------
+
+                    html += `
+                            <div style="border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div style="font-weight: 600; font-size: 0.95em; color: #1F2937;">${item.book_title}</div>
+                            <div style="font-size: 0.8em; color: #6B7280; margin: 4px 0;">
+                                รหัสยืม: #${item.borrow_id} | กำหนดคืน: ${dueDate.toLocaleDateString('th-TH')}
+                            </div>
+                
+                    ${fineInfo}
+
+                        <button class="btn-success" 
+                        style="padding: 8px 12px; font-size: 13px; margin-top: 10px; width: 100%; cursor: pointer; font-weight: 500;" 
+                        onclick="confirmReturnAction(${item.book_id}, '${item.member_id}')">
+                        ยืนยันการคืนเล่มนี้
+                    </button>
+                </div>
+            `;
+        });
+        listDiv.innerHTML = html;
+        }
+
+        // [ฟังก์ชันใหม่ 2] กดยืนยันคืนจริงๆ 
+        async function confirmReturnAction(bookId, memberId) {
+            if (!confirm('ยืนยันว่าได้รับหนังสือคืนเรียบร้อยแล้วใช่หรือไม่?')) return;
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch('/api/returnBook', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    book_id: bookId,
+                    Member_id: memberId
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                if (result.overDueday > 0) {
+                    showMessage(`<strong>คืนสำเร็จ</strong><br>ผู้คืน: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
+                } else {
+                    showMessage(`<strong>คืนสำเร็จ</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
+                }
+            
+            // ล้างข้อมูลหลังคืนเสร็จ
+            document.getElementById('return_item_list').innerHTML = '';
+            document.getElementById('Member_id_return').value = '';
+            
+            // อัปเดตตารางสรุปด้านล่าง
+            loadActiveBorrowers();
+            } else {
+                showMessage(`ผิดพลาด: ${result.message}`, false);
+                }
+            } catch (err) {
+            console.error(err);
+            showMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', false);
+            }
+        }
+
+
        // ฟังก์ชันโหลดรายชื่อลูกค้าที่ยังไม่คืนหนังสือ
         let allActiveData = []; // ตัวแปรสำหรับเก็บข้อมูลทั้งหมดเพื่อใช้ค้นหา
 
@@ -255,68 +363,90 @@
 
         // 3. ฟังก์ชันสำหรับวาดตาราง HTML 
         function renderActiveTable(data) {
-            const displayDiv = document.getElementById('active_display');
+    const displayDiv = document.getElementById('active_display');
 
-            if (data.length === 0) {
-                displayDiv.innerHTML = '<p class="text-center text-success message-box">ไม่พบข้อมูลรายการที่ค้นหา</p>';
-                return;
-            }
+    if (data.length === 0) {
+        displayDiv.innerHTML = '<p class="text-center text-success message-box">ไม่พบข้อมูลรายการที่ค้นหา</p>';
+        return;
+    }
 
-            let html = `
-                <table>
-                    <thead>
-                        <tr class="table-header-gray">
-                            <th>รหัสยืม</th>
-                            <th>ID หนังสือ</th>
-                            <th>ผู้ยืม (ติดต่อ)</th>
-                            <th>หนังสือที่ยืม</th>
-                            <th>ที่อยู่จัดส่ง</th>
-                            <th>วันที่ยืม</th>
-                            <th>กำหนดคืน</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+    let html = `
+        <table>
+            <thead>
+                <tr class="table-header-gray">
+                    <th>รหัสยืม</th>
+                    <th>ID หนังสือ</th>
+                    <th>ผู้ยืม (ติดต่อ)</th>
+                    <th>หนังสือที่ยืม</th>
+                    <th>ที่อยู่จัดส่ง</th>
+                    <th>วันที่ยืม</th>
+                    <th>กำหนดคืน</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    data.forEach(item => {
+        const borrowDate = new Date(item.borrow_date).toLocaleDateString('th-TH');
+        const dueDateObj = new Date(item.due_date);
+        const dueDate = dueDateObj.toLocaleDateString('th-TH');
+        
+        const today = new Date();
+        // รีเซ็ตเวลาให้เป็น 00:00:00 เหมือนกันเพื่อเปรียบเทียบแค่วันที่
+        today.setHours(0,0,0,0);
+        const compareDueDate = new Date(dueDateObj);
+        compareDueDate.setHours(0,0,0,0);
+        
+        const isOverdue = today > compareDueDate;
+        let fineHtml = '';
+
+        if (isOverdue) {
+            // คำนวณส่วนต่างของวัน (มิลลิวินาที -> วัน)
+            const diffTime = Math.abs(today - compareDueDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            
+            const finePerDay = 5; 
+            const totalFine = diffDays * finePerDay;
+
+            fineHtml = `
+                <br><span class="overdue-badge">เลยกำหนด)</span>
+                <br><span class="text-danger" style="font-size: 0.85em; font-weight: bold;">
+                    ค่าปรับ: ${totalFine.toLocaleString()} บาท
+                </span>
             `;
-
-            data.forEach(item => {
-                const borrowDate = new Date(item.borrow_date).toLocaleDateString('th-TH');
-                const dueDateObj = new Date(item.due_date);
-                const dueDate = dueDateObj.toLocaleDateString('th-TH');
-                
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                dueDateObj.setHours(0,0,0,0);
-                
-                const isOverdue = today > dueDateObj;
-                const dueDateClass = isOverdue ? 'text-danger' : '';
-                const overdueBadge = isOverdue ? '<br><span class="overdue-badge">เลยกำหนด</span>' : '';
-
-                html += `
-                    <tr>
-                        <td class="text-gray">#${item.borrow_id}</td>
-                        <td><span class="badge-gray">B-${item.book_id}</span></td>
-                        <td class="text-left">
-                            <div style="margin-bottom: 4px;">
-                                <span class="badge-blue">M-${item.member_id}</span>
-                                <strong>${item.member_name}</strong>
-                            </div>
-                            <span class="text-contact">📞 ${item.member_contact}</span>
-                        </td>
-                        <td class="text-left" style="font-weight: 500;">${item.book_title}</td>
-                        <td class="text-left">
-                            <div class="truncate-text" title="${item.member_address}">
-                                ${item.member_address || '-'}
-                            </div>
-                        </td>
-                        <td>${borrowDate}</td>
-                        <td class="${dueDateClass}">${dueDate} ${overdueBadge}</td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table>';
-            displayDiv.innerHTML = html;
         }
+
+        const dueDateClass = isOverdue ? 'text-danger' : '';
+
+        html += `
+            <tr>
+                <td class="text-gray">#${item.borrow_id}</td>
+                <td><span class="badge-gray">B-${item.book_id}</span></td>
+                <td class="text-left">
+                    <div style="margin-bottom: 4px;">
+                        <span class="badge-blue">M-${item.member_id}</span>
+                        <strong>${item.member_name}</strong>
+                    </div>
+                    <span class="text-contact">📞 ${item.member_contact}</span>
+                </td>
+                <td class="text-left" style="font-weight: 500;">${item.book_title}</td>
+                <td class="text-left">
+                    <div class="truncate-text" title="${item.member_address}">
+                        ${item.member_address || '-'}
+                    </div>
+                </td>
+                <td>${borrowDate}</td>
+                <td class="${dueDateClass}">
+                    ${dueDate}
+                    ${fineHtml}
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    displayDiv.innerHTML = html;
+}
 
         window.addEventListener('DOMContentLoaded', loadActiveBorrowers);
     </script>

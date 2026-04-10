@@ -147,7 +147,7 @@ label {
 }
 
 .input-group { 
-    margin-bottom: 24px; 
+    margin-bottom: 10px; 
 }
 
 button {
@@ -210,7 +210,7 @@ button {
 
 table {
     width: 100%;
-    min-width: 800px; /* ป้องกันตัวอักษรเบียดกันตอนจอย่อ */
+    min-width: 850px; /* ป้องกันตัวอักษรเบียดกันตอนจอย่อ */
     border-collapse: collapse;
     margin-top: 10px;
 }
@@ -259,12 +259,15 @@ td img {
     flex-direction: column;
     gap: 32px; 
     margin-top: 20px;
-    max-width: 850px;
+    max-width: 900px;
     margin-left: auto; 
     margin-right: auto;
 }
 
 .action-card {
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
     background-color: #F9FAFB;
     padding: 30px;
     border-radius: 19px;
@@ -312,13 +315,18 @@ td img {
 
 .modal-content {
     background-color: var(--surface);
-    margin: 6vh auto;
+    margin: 4vh auto;
     padding: 30px;
-    width: 100%;
+    width: 90%;
     max-width: 450px;
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     animation: slideDown 0.3s ease-out forwards;
+
+    max-height: 85vh;   
+    overflow-y: auto;             
+    display: flex;               
+    flex-direction: column;
 }
 
 @keyframes slideDown {

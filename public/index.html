@@ -237,10 +237,12 @@
 
         // 6. เปิด Modal และดึงข้อมูลหนังสือเล่มนั้นมาแสดง
         async function openModal(id) {
+            console.log("คลิกแล้ว ID คือ:", id);
             document.getElementById('libraryModal').style.display = 'block';
             try {
                 const res = await fetch(`/api/libraryshop/${id}`);
                 const b = await res.json();
+                console.log("ข้อมูลที่ได้จาก Server:", b);
                 
                 document.getElementById('edit_id').value = b.id;
                 document.getElementById('edit_title').value = b.title;
