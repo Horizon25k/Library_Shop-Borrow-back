@@ -6,6 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css"> </head>
 <body>
+    <div id="notificationBox"></div>
     <div class="container" style="max-width: 500px;">
         <h2>เพิ่มบัญชีเจ้าหน้าที่ใหม่</h2>
         <p style="color: var(--text-muted); font-size: 14px;">*เฉพาะเจ้าหน้าที่เป็นผ้ดูเเลระบบเท่านั้นที่จะเพิ่มบัณชีได้</p>
@@ -32,16 +33,42 @@
     </div>
 
     <script>
+
         // ป้องกันคนที่ไม่ได้ล็อกอินแอบเข้ามาหน้านี้
         if (!localStorage.getItem('token')) {
             window.location.href = '/login.html';
         }
+        function showMessage(htmlMessage, isSuccess) {
+            const notifBox = document.getElementById('notificationBox');
+            notifBox.style.display = 'block';
+            notifBox.innerHTML = htmlMessage;
+            
+            if(isSuccess) {
+                notifBox.className = 'notify-success';
+            } else {
+                notifBox.className = 'notify-error';
+            }
+
+            setTimeout(() => { 
+                notifBox.style.display = 'none'; 
+            }, 10000); 
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        } 
 
         async function handleRegister() {
             const name = document.getElementById('reg_name').value;
             const username = document.getElementById('reg_username').value;
             const password = document.getElementById('reg_password').value;
             const token = localStorage.getItem('token');
+
+            if(username === 'admin'){
+                console.log('รู้นะว่าจะทำอะไร');
+                
+            }
 
             try {
                 const response = await fetch('/api/register', {
@@ -56,10 +83,10 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(result.message);
-                    window.location.href = '/index.html'; // สร้างเสร็จกลับหน้าหลัก
+                    showMessage(result.message,true);
+                    window.location.href = '/index.html';
                 } else {
-                    alert(result.message);
+                    showMessage(result.message,false);
                 }
             } catch (err) {
                 alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");

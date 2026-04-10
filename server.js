@@ -435,14 +435,17 @@ app.get('/api/lodeUser', authenticateToken , async (req,res) => {
 // ==========================================
 app.post('/api/register', authenticateToken, async (req, res) => {
     try {
+        const { username, password, name } = req.body;
+
             // --- ส่วนที่เพิ่มเข้ามาเพื่อเช็คสิทธิ์แอดมิน ---
         if (req.user.username !== 'admin') {
+            const logMessage = `[สิทธิ์ไม่เพียงพอ] ${req.user.username} พยายามสร้างบัญชี: name:(${name}) Username:(${username}) password:(${password})`;
+            await logActivity(req.user.id, 'AUTH_VIOLATION', logMessage);
+
             return res.status(403).json({ 
                 message: 'สิทธิ์ไม่เพียงพอ! เฉพาะผู้ใช้งาน admin เท่านั้นที่สามารถเพิ่มบัญชีได้' 
             });
         }
-
-        const { username, password, name } = req.body;
 
         // 1. ตรวจสอบว่ามีข้อมูลครบไหม
         if (!username || !password || !name) {
