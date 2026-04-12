@@ -217,24 +217,7 @@ app.delete('/api/books/:id', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 1. API สร้างบัญชีแอดมินอัตโนมัติ 
-// ==========================================
-app.get('/api/setup-admin', async (req, res) => {
-    try {
-        const plainPassword = 'password123'; 
-        const hashedPassword = await bcrypt.hash(plainPassword, 10);
-        
-        await db.query("DELETE FROM users WHERE username = 'admin'");
-        await db.query("INSERT INTO users (username, password) VALUES ('admin', $1)", [hashedPassword]);
-        
-        res.send(`<h2>สร้างบัญชีสำเร็จ!</h2><p>User: <b>admin</b></p><p>Pass: <b>${plainPassword}</b></p>`);
-    } catch (err) {
-        res.status(500).send("Error: " + err.message);
-    }
-});
-
-// ==========================================
-// 2. API สำหรับ Login
+// 1. API สำหรับ Login
 // ==========================================
 app.post('/api/login', async (req, res) => {
     try {
@@ -362,7 +345,9 @@ app.post('/api/returnBook', authenticateToken, async (req,res) => {
         await client.query('COMMIT');
 
         let logDetail = `รับคืนหนังสือ Book ID: ${book_id} จากMember ID: ${Member_id}`;
-        if (fine > 0) logDetail += ` (มีค่าปรับ ${fine} บาท)`;
+        if (fine > 0) {
+            logDetail += ` (มีค่าปรับ ${fine} บาท)`
+        };
         await logActivity(req.user.id, 'RETURN', logDetail);
 
         res.json({
@@ -475,6 +460,8 @@ app.post('/api/register', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });
     }
 });
+
+
 
 // สั่งให้ Server เริ่มทำงาน
 app.listen(3000, () => console.log(`Server running on port 3000`));
