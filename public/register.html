@@ -38,6 +38,34 @@
         if (!localStorage.getItem('token')) {
             window.location.href = '/login.html';
         }
+
+        // ตรวจสอบว่าเป็น Admin จริงหรือไม่ (ป้องกันการเข้าถึงโดยตรง)
+        async function verifyAdmin() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/lodeUser', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.status === 401 || response.status === 403) return logout();
+                const user = await response.json();
+                if (user.username !== 'admin') {
+                    alert("เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเข้าถึงหน้านี้ได้");
+                    window.location.href = '/index.html';
+                }
+            } catch (err) {
+                window.location.href = '/index.html';
+            }
+        }
+        verifyAdmin();
+        
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        
         function showMessage(htmlMessage, isSuccess) {
             const notifBox = document.getElementById('notificationBox');
             notifBox.style.display = 'block';
@@ -65,11 +93,6 @@
             const password = document.getElementById('reg_password').value;
             const token = localStorage.getItem('token');
 
-            if(username === 'admin'){
-                console.log('รู้นะว่าจะทำอะไร');
-                
-            }
-
             try {
                 const response = await fetch('/api/register', {
                     method: 'POST',
@@ -80,13 +103,17 @@
                     body: JSON.stringify({ name, username, password })
                 });
 
+                if (response.status === 401 || response.status === 403) {
+                    return logout();
+                }
+
                 const result = await response.json();
 
                 if (response.ok) {
-                    showMessage(result.message,true);
+                    showMessage(escapeHTML(result.message), true);
                     window.location.href = '/index.html';
                 } else {
-                    showMessage(result.message,false);
+                    showMessage(escapeHTML(result.message), false);
                 }
             } catch (err) {
                 alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");

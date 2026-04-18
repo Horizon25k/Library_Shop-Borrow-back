@@ -78,6 +78,17 @@
             window.location.href = '/login.html';
         } 
 
+        // ฟังก์ชันสำหรับป้องกัน XSS โดยการแปลงอักขระพิเศษเป็น HTML Entities
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function showMessage(htmlMessage, isSuccess) {
             const notifBox = document.getElementById('notificationBox');
             notifBox.style.display = 'block';
@@ -113,9 +124,11 @@
                     }
                 });
 
+                if (response.status === 401 || response.status === 403) return logout();
+
                 if (response.ok) {
                     const user = await response.json();
-                    document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${user.name}</strong>`;
+                    document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${escapeHTML(user.name)}</strong>`;
                 } else {
                     document.getElementById('adminNameDisplay').innerText = 'ไม่พบชื่อเจ้าหน้าที่';
                 }
@@ -146,16 +159,17 @@
                     })
                 });
 
+                if (response.status === 401 || response.status === 403) return logout();
                 const result = await response.json();
 
                 if(response.ok) {
-                    showMessage(`<strong>${result.message}</strong><br>หนังสือ: ${result.book_title}<br>กำหนดคืน: ${result.returnDate}`, true);
+                    showMessage(`<strong>${escapeHTML(result.message)}</strong><br>หนังสือ: ${escapeHTML(result.book_title)}<br>กำหนดคืน: ${escapeHTML(result.returnDate)}`, true);
 
                     document.getElementById('borrowForm').reset();
                     document.getElementById('searchMemberId').value = '';
                     loadActiveBorrowers();
                 }else{
-                    showMessage(`ผิดพลาด: ${result.message}`, false);
+                    showMessage(`ผิดพลาด: ${escapeHTML(result.message)}`, false);
                 }
             }catch(err){
                 console.error(err);
@@ -185,13 +199,14 @@
                     })
                 });
 
+                if (response.status === 401 || response.status === 403) return logout();
                 const result = await response.json();
 
                 if(response.ok) {
                     if(result.overDueday > 0){
-                        showMessage(`<strong>${result.message}</strong><br>ผู้ยืม: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
+                        showMessage(`<strong>${escapeHTML(result.message)}</strong><br>ผู้ยืม: ${escapeHTML(result.borrower_name)}<br>เลยกำหนด: ${escapeHTML(result.overDueday)} วัน<br>ค่าปรับ: ${escapeHTML(result.fine)} บาท`, false);
                     }else{
-                        showMessage(`<strong>${result.message}</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
+                        showMessage(`<strong>${escapeHTML(result.message)}</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
                     }
                     document.getElementById('borrowForm').reset(); // ล้างฟอร์มยืม
                     document.getElementById('searchMemberId').value = ''; // 🌟 ล้างช่องค้นหา
@@ -199,7 +214,7 @@
 
                 }else {
                     
-                    showMessage(`ผิดพลาด: ${result.message}`, false);
+                    showMessage(`ผิดพลาด: ${escapeHTML(result.message)}`, false);
                 }
             }catch(err){
                 console.error('err');
@@ -256,16 +271,18 @@
 
                     html += `
                             <div style="border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="font-weight: 600; font-size: 0.95em; color: #1F2937;">${item.book_title}</div>
+                            <div style="font-weight: 600; font-size: 0.95em; color: #1F2937;">${escapeHTML(item.book_title)}</div>
                             <div style="font-size: 0.8em; color: #6B7280; margin: 4px 0;">
-                                รหัสยืม: #${item.borrow_id} | กำหนดคืน: ${dueDate.toLocaleDateString('th-TH')}
+                                รหัสยืม: #${escapeHTML(item.borrow_id)} | กำหนดคืน: ${dueDate.toLocaleDateString('th-TH')}
                             </div>
                 
                     ${fineInfo}
 
-                        <button class="btn-success" 
+                        <button class="btn-success"
                         style="padding: 8px 12px; font-size: 13px; margin-top: 10px; width: 100%; cursor: pointer; font-weight: 500;" 
-                        onclick="confirmReturnAction(${item.book_id}, '${item.member_id}')">
+                        data-book-id="${escapeHTML(item.book_id)}"
+                        data-member-id="${escapeHTML(item.member_id)}"
+                        onclick="confirmReturnAction(this.dataset.bookId, this.dataset.memberId)">
                         ยืนยันการคืนเล่มนี้
                     </button>
                 </div>
@@ -293,11 +310,12 @@
                 })
             });
 
+            if (response.status === 401 || response.status === 403) return logout();
             const result = await response.json();
 
             if (response.ok) {
                 if (result.overDueday > 0) {
-                    showMessage(`<strong>คืนสำเร็จ</strong><br>ผู้คืน: ${result.borrower_name}<br>เลยกำหนด: ${result.overDueday} วัน<br>ค่าปรับ: ${result.fine} บาท`, false);
+                    showMessage(`<strong>คืนสำเร็จ</strong><br>ผู้คืน: ${escapeHTML(result.borrower_name)}<br>เลยกำหนด: ${escapeHTML(result.overDueday)} วัน<br>ค่าปรับ: ${escapeHTML(result.fine)} บาท`, false);
                 } else {
                     showMessage(`<strong>คืนสำเร็จ</strong><br>ขอบคุณที่ส่งคืนตรงเวลาครับ`, true);
                 }
@@ -309,7 +327,7 @@
             // อัปเดตตารางสรุปด้านล่าง
             loadActiveBorrowers();
             } else {
-                showMessage(`ผิดพลาด: ${result.message}`, false);
+                showMessage(`ผิดพลาด: ${escapeHTML(result.message)}`, false);
                 }
             } catch (err) {
             console.error(err);
@@ -328,6 +346,7 @@
 
             try {
                 const response = await fetch('/api/active-borrows');
+                if (response.status === 401 || response.status === 403) return logout();
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -420,19 +439,19 @@
 
         html += `
             <tr>
-                <td class="text-gray">#${item.borrow_id}</td>
-                <td><span class="badge-gray">B-${item.book_id}</span></td>
+                <td class="text-gray">#${escapeHTML(item.borrow_id)}</td>
+                <td><span class="badge-gray">B-${escapeHTML(item.book_id)}</span></td>
                 <td class="text-left">
                     <div style="margin-bottom: 4px;">
-                        <span class="badge-blue">M-${item.member_id}</span>
-                        <strong>${item.member_name}</strong>
+                        <span class="badge-blue">M-${escapeHTML(item.member_id)}</span>
+                        <strong>${escapeHTML(item.member_name)}</strong>
                     </div>
-                    <span class="text-contact">📞 ${item.member_contact}</span>
+                    <span class="text-contact">📞 ${escapeHTML(item.member_contact)}</span>
                 </td>
-                <td class="text-left" style="font-weight: 500;">${item.book_title}</td>
+                <td class="text-left" style="font-weight: 500;">${escapeHTML(item.book_title)}</td>
                 <td class="text-left">
-                    <div class="truncate-text" title="${item.member_address}">
-                        ${item.member_address || '-'}
+                    <div class="truncate-text" title="${escapeHTML(item.member_address)}">
+                        ${escapeHTML(item.member_address) || '-'}
                     </div>
                 </td>
                 <td>${borrowDate}</td>

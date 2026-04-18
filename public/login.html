@@ -10,10 +10,11 @@
 <body>
 
     <div class="login-box">
-        <h2>ระบบจัดการหนังสือ</h2>
+        <div class="login-icon">📚</div>
+        <h2>ระบบจัดการหนังสือ<br><span style="font-size: 16px; color: #6b7280; font-weight: 400;">Library Shop</span></h2>
         <form id="loginForm" onsubmit="return false;">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="username" placeholder="ชื่อผู้ใช้งาน (Username)" required>
+            <input type="password" id="password" placeholder="รหัสผ่าน (Password)" required>
             <button type="button" onclick="login()">เข้าสู่ระบบ</button>
         </form>
     </div>
@@ -22,13 +23,10 @@
         async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const token = localStorage.getItem('token');
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
 

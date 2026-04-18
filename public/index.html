@@ -78,6 +78,17 @@
             window.location.href = '/login.html';
         }        
 
+        // ฟังก์ชันสำหรับป้องกัน XSS โดยการแปลงอักขระพิเศษเป็น HTML Entities
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function showMessage(htmlMessage, isSuccess) {
             const notifBox = document.getElementById('notificationBox');
             notifBox.style.display = 'block';
@@ -104,10 +115,12 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
+                if (response.status === 401 || response.status === 403) return logout();
+
                 if (response.ok) {
                     const user = await response.json();
             
-                document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${user.name}</strong>`;
+                document.getElementById('adminNameDisplay').innerHTML = `สวัสดี, คุณ <strong>${escapeHTML(user.name)}</strong>`;
 
                 // --- ส่วนที่ทำหน้าที่ "ซ่อน/โชว์" ปุ่ม ---
                 const btnReg = document.getElementById('btnRegister');
@@ -115,7 +128,7 @@
                         if (user.username === 'admin') {
                             btnReg.style.display = 'inline-block';
                         } else {
-                            btnReg.style.display = 'none';
+                            btnReg.remove(); // ลบปุ่มออกจาก DOM แทนการแค่ซ่อนด้วย CSS
                             }
                         }
                 } else {
@@ -138,12 +151,16 @@
 
         // 2. ดึงข้อมูลหมวดหมู่มาใส่ใน Dropdown
         async function loadCategories() {
+            const token = localStorage.getItem('token');
             try {
-                const res = await fetch('/api/categories');
+                const res = await fetch('/api/categories', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401 || res.status === 403) return logout();
                 const categories = await res.json();
                 let options = `<option value="">เลือกหมวดหมู่</option>`;
                 categories.forEach(c => {
-                    options += `<option value="${c.id}">${c.name}</option>`;
+                    options += `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`;
                 });
                 document.getElementById('category_id').innerHTML = options;
                 document.getElementById('edit_category_id').innerHTML = options;
@@ -152,12 +169,16 @@
 
         // 3. ดึงข้อมูลสถานะมาใส่ใน Dropdown
         async function loadStatus() {
+            const token = localStorage.getItem('token');
             try {
-                const res = await fetch('/api/statuses');
+                const res = await fetch('/api/statuses', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401 || res.status === 403) return logout();
                 const statuses = await res.json();
                 let options = `<option value="">เลือกสถานะ</option>`;
                 statuses.forEach(s => {
-                    options += `<option value="${s.id}">${s.name}</option>`;
+                    options += `<option value="${escapeHTML(s.id)}">${escapeHTML(s.name)}</option>`;
                 });
                 document.getElementById('status_id').innerHTML = options;
                 document.getElementById('edit_status_id').innerHTML = options;
@@ -166,8 +187,12 @@
 
         // 4. ดึงข้อมูลหนังสือมาสร้างเป็นตาราง HTML
         async function loadlibrary() {
+            const token = localStorage.getItem('token');
             try {
-                const response = await fetch('/api/libraryshop');
+                const response = await fetch('/api/libraryshop', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.status === 401 || response.status === 403) return logout();
                 const books = await response.json();
                 
                 let html = `
@@ -181,14 +206,14 @@
                 books.forEach(b => {
                     html += `
                         <tr>
-                            <td><img src="${b.cover_image}" width="60" height="60"></td>
-                            <td style="color: #6B7280;">${b.id}</td>
-                            <td>${b.title}</td>
-                            <td>${b.author || '-'}</td>
-                            <td>${b.published_year}</td>
-                            <td>${b.status_name || '-'}</td>
-                            <td>${b.categories || '-'}</td>
-                            <td><a href="#" class="edit-link" onclick="openModal(${b.id}); return false;">แก้ไข</a></td>
+                            <td><img src="${escapeHTML(b.cover_image)}" width="60" height="60"></td>
+                            <td style="color: #6B7280;">${escapeHTML(b.id)}</td>
+                            <td>${escapeHTML(b.title)}</td>
+                            <td>${escapeHTML(b.author || '-')}</td>
+                            <td>${escapeHTML(b.published_year)}</td>
+                            <td>${escapeHTML(b.status_name || '-')}</td>
+                            <td>${escapeHTML(b.categories || '-')}</td>
+                            <td><a href="#" class="edit-link" data-id="${escapeHTML(b.id)}" onclick="openModal(this.dataset.id); return false;">แก้ไข</a></td>
                         </tr>
                     `;
                 });
@@ -232,14 +257,16 @@
                     body: formData
                 });
                 
+                if (response.status === 401 || response.status === 403) return logout();
+                
                 if (!response.ok) {
                     const errorData = await response.json();
-                    showMessage('เกิดข้อผิดพลาด: ' + (errorData.message || 'ไม่สามารถบันทึกได้'), false);
+                    showMessage('เกิดข้อผิดพลาด: ' + escapeHTML(errorData.message || 'ไม่สามารถบันทึกได้'), false);
                     return;
                 }
                 
                 const result = await response.json();
-                showMessage(result.message, true); 
+                showMessage(escapeHTML(result.message), true); 
                 
                 document.getElementById('libraryForm').reset(); 
                 await loadlibrary(); 
@@ -248,8 +275,12 @@
 
         // 6. เปิด Modal และดึงข้อมูลหนังสือเล่มนั้นมาแสดง
         async function openModal(id) {
+            const token = localStorage.getItem('token');
             try {
-            const res = await fetch(`/api/libraryshop/${id}`);
+            const res = await fetch(`/api/libraryshop/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.status === 401 || res.status === 403) return logout();
             const data = await res.json();
 
             // ใส่ข้อมูลลงในฟอร์มแก้ไข
@@ -305,6 +336,8 @@
                     body: formData
                 });
                 
+                if (response.status === 401 || response.status === 403) return logout();
+                
                 if(response.ok) {
                     showMessage('บันทึกข้อมูลสำเร็จ', true); 
                     closeModal();
@@ -329,14 +362,16 @@
                         }
                     });
                     
+                    if (response.status === 401 || response.status === 403) return logout();
+
                     const result = await response.json();
 
                     if (response.ok) {
-                        showMessage(result.message, true);
+                        showMessage(escapeHTML(result.message), true);
                         closeModal();
                         await loadlibrary(); 
                     } else {
-                        showMessage(result.message || 'ลบข้อมูลล้มเหลว', false);
+                        showMessage(escapeHTML(result.message || 'ลบข้อมูลล้มเหลว'), false);
                     }
                 } catch(err) { console.error('Error:', err); }
             }
